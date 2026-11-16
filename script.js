@@ -448,7 +448,9 @@ function inisisasiAplikasiUtama() {
           const url = URL.createObjectURL(combinedBlob);
           const link = document.createElement("a");
           link.href = url;
-          link.download = `barcode_menu_${storeIdentity.name.toLowerCase().replace(/\s+/g, "_")}.png`;
+          // RENAME FILE OTOMATIS SESUAI NAMA TOKO
+          const safeStoreName = storeIdentity.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          link.download = `barcode_menu_${safeStoreName}.png`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
