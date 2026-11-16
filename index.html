@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Kedai Nusantara</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+  <!-- LAYAR LOGIN ADMIN -->
+  <div id="loginScreen" class="login-screen-wrapper">
+    <div class="login-card">
+      <div class="brand-logo" style="margin: 0 auto 16px auto; width: 56px; height: 56px; font-size: 1.3rem;" id="loginLogoText">KN</div>
+      <h2 id="loginTitleText">Panel Admin</h2>
+      <p>Masukkan kata sandi admin untuk masuk ke panel pengaturan dan pengelolaan menu.</p>
+      
+      <div style="text-align: left;">
+        <div class="form-group">
+          <label>Kata Sandi Admin (Kernaden)</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="inputAdminPassword" placeholder="Masukkan sandi...">
+            <button type="button" id="btnTogglePassword">Lihat</button>
+          </div>
+        </div>
+        <button class="btn-primary btn-full" id="btnLoginAdmin">Masuk dengan Sandi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APLIKASI UTAMA ADMIN -->
+  <div id="mainAppContent" style="display: none;">
+    <header class="navbar">
+      <div class="nav-brand">
+        <div class="brand-logo" id="navBrandLogo">KN</div>
+        <div>
+          <h1 id="navBrandTitle">Kedai Nusantara</h1>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button class="icon-btn" id="btnOpenSettings" aria-label="Pengaturan Admin" title="Pengaturan Admin">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+
+        <button class="icon-btn" id="btnLogoutApp" aria-label="Keluar Sesi" title="Keluar Sesi" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero-banner">
+        <span class="pill-tag">MODE PANEL ADMIN</span>
+        <h2>Kelola Menu & Ekspor Barcode</h2>
+        <p>Gunakan ikon roda gigi di kanan atas untuk mengatur toko, menambah menu, atau mengunduh gambar Barcode QR untuk Client.</p>
+      </section>
+
+      <section class="search-section">
+        <div class="search-box">
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchMenuInput" placeholder="Cari nama menu..." autocomplete="off">
+          <button type="button" id="btnClearSearch" class="clear-search-btn" style="display: none;" aria-label="Hapus pencarian">&times;</button>
+        </div>
+      </section>
+
+      <div class="section-header">
+        <h3 id="activeCategoryTitle">Semua Menu</h3>
+        <span id="menuCounter" class="menu-counter">0 Menu</span>
+      </div>
+
+      <section class="menu-grid" id="menuContainer"></section>
+    </main>
+
+    <!-- Modal Panel Pengaturan Admin dengan 3 Tab Menu -->
+    <div class="modal-backdrop" id="settingsModal">
+      <div class="modal-card" style="max-width: 760px; padding: 28px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 14px;">
+          <div>
+            <span class="pill-tag">PANEL KONTROL ADMIN</span>
+            <h2 style="font-size: 1.4rem; margin-top: 4px;">Pengaturan & Kelola Menu</h2>
+          </div>
+          <button class="close-btn" id="btnCloseSettingsModal">&times;</button>
+        </div>
+
+        <!-- TAB NAVIGASI 3 MENU -->
+        <div class="admin-tabs-nav">
+          <button class="admin-tab-btn active" data-tab="store">⚙️ Pengaturan Toko</button>
+          <button class="admin-tab-btn" data-tab="menu">🍔 Kelola Menu</button>
+          <button class="admin-tab-btn" data-tab="barcode">📥 Unduh Barcode</button>
+        </div>
+
+        <div style="max-height: 65vh; overflow-y: auto; padding-right: 4px;">
+          
+          <!-- TAB 1: PENGATURAN TOKO -->
+          <div id="tabContentStore" class="admin-tab-content active">
+            <div style="background: var(--bg-elevated); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+              <h3 style="color: var(--accent); font-size: 1.05rem; margin-bottom: 14px;">Identitas Toko</h3>
+              <div class="form-group"><label>Nama Toko</label><input type="text" id="settingStoreName"></div>
+              <div class="form-group"><label>Singkatan Logo</label><input type="text" id="settingStoreLogo" maxlength="3"></div>
+              <button class="btn-primary btn-full" id="btnSaveStoreSettings">Simpan Identitas Toko</button>
+            </div>
+          </div>
+
+          <!-- TAB 2: KELOLA MENU (Tambah & Daftar) -->
+          <div id="tabContentMenu" class="admin-tab-content" style="display: none;">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="background: var(--bg-elevated); padding: 18px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h3 style="color: var(--accent); font-size: 1.05rem; margin-bottom: 14px;" id="formMenuHeaderTitle">Tambah Menu Baru & Unggah Foto</h3>
+                <div class="form-group"><label>Nama Menu</label><input type="text" id="addMenuName" placeholder="Contoh: Es Kopi Karamel"></div>
+                <div class="form-group">
+                  <label>Kategori</label>
+                  <select id="addMenuCategory" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 12px; border-radius: 10px;">
+                    <option value="kopi">Kopi</option>
+                    <option value="non-kopi">Non-Kopi</option>
+                    <option value="makanan-berat">Makanan Berat</option>
+                    <option value="camilan">Camilan</option>
+                    <option value="bakaran">Bakaran</option>
+                    <option value="kue-dessert">Kue & Dessert</option>
+                    <option value="menu-paket">Menu Paket</option>
+                    <option value="tambahan">Tambahan / Topping</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Harga (angka saja)</label><input type="number" id="addMenuPrice" placeholder="15000"></div>
+                <div class="form-group"><label>Foto Menu</label><input type="file" id="addMenuImageFile" accept="image/*" style="background: var(--bg-dark); border: 1px solid var(--border-color); padding: 10px; border-radius: 10px; width: 100%; color: var(--text-main);"></div>
+                <div class="form-group"><label>Deskripsi</label><input type="text" id="addMenuDesc" placeholder="Keterangan singkat..."></div>
+                <button class="btn-primary btn-full" id="btnSaveNewMenu">Simpan & Perbarui Data</button>
+              </div>
+
+              <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px;">
+                <h3 style="color: var(--accent); font-size: 1.05rem; margin-bottom: 12px;">📋 Daftar Menu Tambahan Kustom</h3>
+                <div id="customMenuListAdmin"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: UNDUH BARCODE -->
+          <div id="tabContentBarcode" class="admin-tab-content" style="display: none;">
+            <div style="background: var(--bg-elevated); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
+              <h3 style="color: var(--accent); font-size: 1.1rem; margin-bottom: 8px;">Unduh Barcode Menu untuk Client</h3>
+              <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">Klik tombol di bawah untuk langsung mengunduh gambar Barcode QR (.png) berisi nama toko, menu, dan foto asli untuk Client.</p>
+              <button class="btn-primary btn-full" id="btnDownloadBarcodeQr" style="padding: 14px; font-size: 1rem;">📥 Unduh Gambar Barcode Menu (.PNG)</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hiddenQrRender" style="position: fixed; left: -9999px; top: -9999px;"></div>
+
+  <div class="toast" id="toastNotif">Berhasil!</div>
+  <script src="script.js"></script>
+</body>
+</html>
