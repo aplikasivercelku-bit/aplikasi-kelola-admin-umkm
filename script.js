@@ -198,10 +198,14 @@ function mulaiEditMenuCustom(index) {
   document.getElementById("addMenuCategory").value = item.kategori;
   document.getElementById("addMenuPrice").value = item.harga;
   
+  // Jika gambar berupa URL HTTP/HTTPS, masukkan ke input URL
   const imgInputUrl = document.getElementById("addMenuImageUrl");
   if (imgInputUrl) {
     imgInputUrl.value = item.gambar.startsWith("http") ? item.gambar : "";
   }
+  
+  const fileInput = document.getElementById("addMenuImageFile");
+  if (fileInput) fileInput.value = "";
 
   document.getElementById("addMenuDesc").value = item.deskripsi;
 
@@ -233,10 +237,12 @@ function batalEditMenu() {
   document.getElementById("addMenuPrice").value = "";
   const imgInputUrl = document.getElementById("addMenuImageUrl");
   if (imgInputUrl) imgInputUrl.value = "";
+  const fileInput = document.getElementById("addMenuImageFile");
+  if (fileInput) fileInput.value = "";
   document.getElementById("addMenuDesc").value = "";
 
   const formHeader = document.getElementById("formMenuHeaderTitle");
-  if (formHeader) formHeader.textContent = "Tambah Menu Baru & Link Gambar";
+  if (formHeader) formHeader.textContent = "Tambah Menu Baru & Unggah Foto";
 
   const btnSave = document.getElementById("btnSaveNewMenu");
   if (btnSave) btnSave.textContent = "Simpan & Perbarui Data";
@@ -320,16 +326,18 @@ function inisisasiAplikasiUtama() {
   document.getElementById("settingStoreName").value = storeIdentity.name;
   document.getElementById("settingStoreLogo").value = storeIdentity.logo;
 
-  // Pastikan form input foto file lama dibersihkan dan hanya menyisakan input URL gambar
+  // Pastikan elemen input URL gambar tersedia di form tambah menu (jika belum ada di HTML, buat secara dinamis)
   const formMenuBox = document.getElementById("tabContentMenu");
-  if (formMenuBox) {
-    // Hapus elemen file input lama jika masih tersisa di DOM
-    const oldFileInputContainer = document.getElementById("addMenuImageFile")?.parentElement;
-    if (oldFileInputContainer) {
-      oldFileInputContainer.innerHTML = `
-        <label style="font-size:0.82rem; color:var(--text-muted); display:block; margin-bottom:4px;">Link Gambar (URL)</label>
-        <input type="url" id="addMenuImageUrl" placeholder="https://cdn.corenexis.com/.../gambar.jpg" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; outline: none;">
+  if (formMenuBox && !document.getElementById("addMenuImageUrl")) {
+    const targetEl = document.getElementById("addMenuImageFile")?.parentElement;
+    if (targetEl) {
+      const urlDiv = document.createElement("div");
+      urlDiv.style.marginTop = "10px";
+      urlDiv.innerHTML = `
+        <label style="font-size:0.82rem; color:var(--text-muted); display:block; margin-bottom:4px;">Atau Masukkan Link Gambar (URL)</label>
+        <input type="url" id="addMenuImageUrl" placeholder="https://contoh.com/gambar.jpg" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; outline: none;">
       `;
+      targetEl.appendChild(urlDiv);
     }
   }
 
@@ -425,7 +433,7 @@ function inisisasiAplikasiUtama() {
         lk: item.labelKategori,
         h: item.harga,
         d: item.deskripsi,
-        g: item.gambar
+        g: item.gambar // Menyertakan link/path gambar ke dalam QR lite agar kamera juga bisa mendeteksi langsung
       }))
     };
 
@@ -475,7 +483,7 @@ function inisisasiAplikasiUtama() {
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
 
-          tampilkanToast("✓ Gambar Barcode QR + Link Foto berhasil diunduh!");
+          tampilkanToast("✓ Gambar Barcode QR + Foto Asli berhasil diunduh!");
         }, "image/png");
       };
 
@@ -493,6 +501,7 @@ function inisisasiAplikasiUtama() {
     const name = document.getElementById("addMenuName").value.trim();
     const kategori = document.getElementById("addMenuCategory").value;
     const harga = parseInt(document.getElementById("addMenuPrice").value);
+    const fileInput = document.getElementById("addMenuImageFile");
     const urlInput = document.getElementById("addMenuImageUrl");
     const desc = document.getElementById("addMenuDesc").value.trim();
 
@@ -503,38 +512,53 @@ function inisisasiAplikasiUtama() {
 
     const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
     const labelKategori = katObj ? katObj.nama : "Lainnya";
-    const gambarSrc = urlInput && urlInput.value.trim() !== "" ? urlInput.value.trim() : `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
 
-    if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
-      menuCustom[editMenuIndex] = {
-        ...menuCustom[editMenuIndex],
-        nama: name,
-        kategori: kategori,
-        labelKategori: labelKategori,
-        harga: harga,
-        deskripsi: desc || "Menu pilihan kedai.",
-        gambar: gambarSrc
-      };
-      tampilkanToast("✓ Perubahan menu berhasil disimpan!");
+    const selesaikanSimpan = (gambarSrc) => {
+      if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
+        menuCustom[editMenuIndex] = {
+          ...menuCustom[editMenuIndex],
+          nama: name,
+          kategori: kategori,
+          labelKategori: labelKategori,
+          harga: harga,
+          deskripsi: desc || "Menu pilihan kedai.",
+          gambar: gambarSrc
+        };
+        tampilkanToast("✓ Perubahan menu berhasil disimpan!");
+      } else {
+        const newMenuItem = {
+          id: Date.now(),
+          nama: name,
+          kategori: kategori,
+          labelKategori: labelKategori,
+          harga: harga,
+          deskripsi: desc || "Menu pilihan kedai.",
+          gambar: gambarSrc
+        };
+        menuCustom.push(newMenuItem);
+        tampilkanToast("✓ Menu berhasil ditambahkan!");
+      }
+
+      DATA_MENU = [...menuCustom];
+      simpanStateLocal();
+
+      renderMenu();
+      renderAdminCustomMenuList();
+      batalEditMenu();
+    };
+
+    if (fileInput && fileInput.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = (e) => selesaikanSimpan(e.target.result);
+      reader.readAsDataURL(fileInput.files[0]);
+    } else if (urlInput && urlInput.value.trim() !== "") {
+      selesaikanSimpan(urlInput.value.trim());
     } else {
-      const newMenuItem = {
-        id: Date.now(),
-        nama: name,
-        kategori: kategori,
-        labelKategori: labelKategori,
-        harga: harga,
-        deskripsi: desc || "Menu pilihan kedai.",
-        gambar: gambarSrc
-      };
-      menuCustom.push(newMenuItem);
-      tampilkanToast("✓ Menu berhasil ditambahkan!");
+      if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
+        selesaikanSimpan(menuCustom[editMenuIndex].gambar);
+      } else {
+        selesaikanSimpan(`https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`);
+      }
     }
-
-    DATA_MENU = [...menuCustom];
-    simpanStateLocal();
-
-    renderMenu();
-    renderAdminCustomMenuList();
-    batalEditMenu();
   });
 }
