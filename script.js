@@ -1,8 +1,8 @@
 const ADMIN_PASS_VALID = "Kernaden";
 
 let storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {
-  name: "Kedai Nusantara",
-  logo: "KN"
+  name: "",
+  logo: ""
 };
 
 let menuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom")) || [];
@@ -24,10 +24,31 @@ const DAFTAR_KATEGORI = [
 ];
 
 function applyStoreIdentity() {
+  const isAdminLogged = localStorage.getItem("umkm_admin_logged") === "true";
+
+  if (!isAdminLogged || !storeIdentity.name) {
+    document.title = "Panel Admin";
+    document.querySelectorAll("#loginLogoText").forEach(el => {
+      el.textContent = "ADM";
+      el.style.background = "var(--bg-elevated)";
+      el.style.color = "var(--text-muted)";
+    });
+    document.querySelectorAll("#loginTitleText").forEach(el => el.textContent = "Panel Admin");
+    return;
+  }
+
   document.title = `Admin - ${storeIdentity.name}`;
   document.querySelectorAll("#navBrandTitle").forEach(el => el.textContent = storeIdentity.name);
-  document.querySelectorAll("#navBrandLogo").forEach(el => el.textContent = storeIdentity.logo);
-  document.querySelectorAll("#loginLogoText").forEach(el => el.textContent = storeIdentity.logo);
+  document.querySelectorAll("#navBrandLogo").forEach(el => {
+    el.textContent = storeIdentity.logo;
+    el.style.background = "";
+    el.style.color = "";
+  });
+  document.querySelectorAll("#loginLogoText").forEach(el => {
+    el.textContent = storeIdentity.logo;
+    el.style.background = "";
+    el.style.color = "";
+  });
   document.querySelectorAll("#loginTitleText").forEach(el => el.textContent = `Admin - ${storeIdentity.name}`);
 }
 
@@ -262,6 +283,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btnLoginAdmin").addEventListener("click", () => {
     if (inputPass.value.trim() === ADMIN_PASS_VALID) {
+      if (!storeIdentity.name) {
+        storeIdentity.name = "Kedai Nusantara";
+        storeIdentity.logo = "KN";
+        simpanStateLocal();
+      }
       localStorage.setItem("umkm_admin_logged", "true");
       loginScreen.style.display = "none";
       mainAppContent.style.display = "block";
@@ -311,7 +337,6 @@ function inisisasiAplikasiUtama() {
     });
   }
 
-  // LOGIKA PINDAH TAB ADMIN (3 MENU)
   const tabButtons = document.querySelectorAll(".admin-tab-btn");
   const tabContents = {
     store: document.getElementById("tabContentStore"),
