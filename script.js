@@ -197,8 +197,17 @@ function mulaiEditMenuCustom(index) {
   document.getElementById("addMenuName").value = item.nama;
   document.getElementById("addMenuCategory").value = item.kategori;
   document.getElementById("addMenuPrice").value = item.harga;
+  
+  // Jika gambar berupa URL HTTP/HTTPS, masukkan ke input URL
+  const imgInputUrl = document.getElementById("addMenuImageUrl");
+  if (imgInputUrl) {
+    imgInputUrl.value = item.gambar.startsWith("http") ? item.gambar : "";
+  }
+  
+  const fileInput = document.getElementById("addMenuImageFile");
+  if (fileInput) fileInput.value = "";
+
   document.getElementById("addMenuDesc").value = item.deskripsi;
-  document.getElementById("addMenuImageFile").value = "";
 
   const formHeader = document.getElementById("formMenuHeaderTitle");
   if (formHeader) formHeader.textContent = `✏️ Edit Menu: ${item.nama}`;
@@ -226,7 +235,10 @@ function batalEditMenu() {
   editMenuIndex = null;
   document.getElementById("addMenuName").value = "";
   document.getElementById("addMenuPrice").value = "";
-  document.getElementById("addMenuImageFile").value = "";
+  const imgInputUrl = document.getElementById("addMenuImageUrl");
+  if (imgInputUrl) imgInputUrl.value = "";
+  const fileInput = document.getElementById("addMenuImageFile");
+  if (fileInput) fileInput.value = "";
   document.getElementById("addMenuDesc").value = "";
 
   const formHeader = document.getElementById("formMenuHeaderTitle");
@@ -313,6 +325,21 @@ function inisisasiAplikasiUtama() {
 
   document.getElementById("settingStoreName").value = storeIdentity.name;
   document.getElementById("settingStoreLogo").value = storeIdentity.logo;
+
+  // Pastikan elemen input URL gambar tersedia di form tambah menu (jika belum ada di HTML, buat secara dinamis)
+  const formMenuBox = document.getElementById("tabContentMenu");
+  if (formMenuBox && !document.getElementById("addMenuImageUrl")) {
+    const targetEl = document.getElementById("addMenuImageFile")?.parentElement;
+    if (targetEl) {
+      const urlDiv = document.createElement("div");
+      urlDiv.style.marginTop = "10px";
+      urlDiv.innerHTML = `
+        <label style="font-size:0.82rem; color:var(--text-muted); display:block; margin-bottom:4px;">Atau Masukkan Link Gambar (URL)</label>
+        <input type="url" id="addMenuImageUrl" placeholder="https://contoh.com/gambar.jpg" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; outline: none;">
+      `;
+      targetEl.appendChild(urlDiv);
+    }
+  }
 
   DATA_MENU = [...menuCustom];
   renderMenu();
@@ -405,7 +432,8 @@ function inisisasiAplikasiUtama() {
         k: item.kategori,
         lk: item.labelKategori,
         h: item.harga,
-        d: item.deskripsi
+        d: item.deskripsi,
+        g: item.gambar // Menyertakan link/path gambar ke dalam QR lite agar kamera juga bisa mendeteksi langsung
       }))
     };
 
@@ -448,7 +476,6 @@ function inisisasiAplikasiUtama() {
           const url = URL.createObjectURL(combinedBlob);
           const link = document.createElement("a");
           link.href = url;
-          // RENAME FILE OTOMATIS SESUAI NAMA TOKO
           const safeStoreName = storeIdentity.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
           link.download = `barcode_menu_${safeStoreName}.png`;
           document.body.appendChild(link);
@@ -475,6 +502,7 @@ function inisisasiAplikasiUtama() {
     const kategori = document.getElementById("addMenuCategory").value;
     const harga = parseInt(document.getElementById("addMenuPrice").value);
     const fileInput = document.getElementById("addMenuImageFile");
+    const urlInput = document.getElementById("addMenuImageUrl");
     const desc = document.getElementById("addMenuDesc").value.trim();
 
     if (!name || isNaN(harga)) {
@@ -519,10 +547,12 @@ function inisisasiAplikasiUtama() {
       batalEditMenu();
     };
 
-    if (fileInput.files.length > 0) {
+    if (fileInput && fileInput.files.length > 0) {
       const reader = new FileReader();
       reader.onload = (e) => selesaikanSimpan(e.target.result);
       reader.readAsDataURL(fileInput.files[0]);
+    } else if (urlInput && urlInput.value.trim() !== "") {
+      selesaikanSimpan(urlInput.value.trim());
     } else {
       if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
         selesaikanSimpan(menuCustom[editMenuIndex].gambar);
