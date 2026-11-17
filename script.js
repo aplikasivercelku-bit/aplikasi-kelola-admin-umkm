@@ -188,9 +188,6 @@ function mulaiEditMenuCustom(index) {
   document.getElementById("addMenuName").value = item.nama;
   document.getElementById("addMenuCategory").value = item.kategori;
   document.getElementById("addMenuPrice").value = item.harga;
-  
-  const imgInputUrl = document.getElementById("addMenuImageUrl");
-  if (imgInputUrl) imgInputUrl.value = item.gambar.startsWith("http") ? item.gambar : "";
   document.getElementById("addMenuDesc").value = item.deskripsi;
 
   const formHeader = document.getElementById("formMenuHeaderTitle");
@@ -353,17 +350,15 @@ function inisisasiAplikasiUtama() {
     tampilkanToast("✓ Identitas toko diperbarui!");
   });
 
-  // FITUR UTAMA: QR CODE BERISI LINK URL WEBSITE CLIENT VERCEL ANDA
+  // QR CODE LANGSUNG KE URL CLIENT VERCEL ANDA
   document.getElementById("btnDownloadBarcodeQr").addEventListener("click", () => {
     if (typeof QRCode === "undefined") {
       alert("Library QRCode belum termuat.");
       return;
     }
 
-    // Masukkan Link URL Website Client Anda di sini (misal URL Vercel Client Anda)
-    const clientUrl = window.location.origin.includes("localhost") 
-      ? "https://aplikasi-umkm-five.vercel.app/" 
-      : window.location.origin + "/"; // Otomatis mendeteksi domain Vercel Anda
+    // Link URL Vercel Client yang dituju saat barcode discan
+    const clientUrl = "https://aplikasi-umkm-five.vercel.app/";
 
     const hiddenContainer = document.getElementById("hiddenQrRender");
     hiddenContainer.innerHTML = "";
