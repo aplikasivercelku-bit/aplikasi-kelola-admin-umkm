@@ -58,7 +58,7 @@
       </div>
 
       <div class="menu-grid" id="menuContainer">
-        <!-- Daftar menu kustom -->
+        <!-- Menu kustom -->
       </div>
     </main>
   </div>
@@ -74,12 +74,12 @@
       <div style="padding: 20px; overflow-y: auto; max-height: 80vh;">
         <!-- TAB NAVIGASI MODAL -->
         <div class="admin-tabs-nav">
-          <button class="admin-tab-btn active" data-tab="store">⚙️ Toko & QRIS</button>
+          <button class="admin-tab-btn active" data-tab="store">⚙️ Toko & Pembayaran</button>
           <button class="admin-tab-btn" data-tab="menu">🍔 Kelola Menu</button>
           <button class="admin-tab-btn" data-tab="barcode">📱 Unduh Barcode</button>
         </div>
 
-        <!-- TAB 1: PENGATURAN TOKO & QRIS -->
+        <!-- TAB 1: PENGATURAN TOKO & INFO REKENING -->
         <div id="tabContentStore" class="admin-tab-content">
           <div class="form-group">
             <label>Nama Toko</label>
@@ -94,17 +94,11 @@
           <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
           <div class="form-group">
-            <label>Link Gambar QRIS / Info Rekening Pembayaran (<a href="https://sigmawire.net/image-to-url-converter" target="_blank" style="color:var(--accent);">sigmawire.net</a>)</label>
-            <input type="text" id="settingQrisImgUrl" placeholder="https://sigmawire.net/...">
+            <label>Teks Keterangan QRIS / No. Rekening Pembayaran</label>
+            <input type="text" id="settingQrisText" placeholder="Contoh: OLAN MAULANA Bank Mandiri 1630011235432">
+            <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">Keterangan ini akan otomatis tampil di metode pembayaran Client.</small>
           </div>
-          <div class="form-group">
-            <label>Teks Keterangan QRIS / No. Rekening</label>
-            <input type="text" id="settingQrisText" placeholder="Contoh: DANA/OVO/BCA: 087877611218 a.n Olan">
-          </div>
-          <div style="text-align: center; margin: 12px 0;">
-            <img id="previewQrisAdmin" src="" alt="Preview QRIS" style="max-width: 160px; max-height: 160px; display: none; border-radius: 8px; border: 1px solid var(--border-color);">
-          </div>
-          <button type="button" id="btnSaveQrisSettings" class="btn-primary btn-full">Simpan Pengaturan QRIS</button>
+          <button type="button" id="btnSaveQrisSettings" class="btn-primary btn-full" style="margin-top: 10px;">Simpan Info Pembayaran</button>
         </div>
 
         <!-- TAB 2: KELOLA MENU -->
@@ -152,7 +146,7 @@
         <!-- TAB 3: UNDUH BARCODE -->
         <div id="tabContentBarcode" class="admin-tab-content" style="display: none; text-align: center; padding: 20px 0;">
           <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">Barcode Akses Menu Client</h4>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Unduh QR Code ini agar pelanggan dapat memindai dan langsung membuka halaman menu.</p>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Unduh QR Code ini agar pelanggan dapat memindai dan langsung membuka halaman menu pemesanan di HP mereka.</p>
           <div id="hiddenQrRender" style="display: none;"></div>
           <button type="button" id="btnDownloadBarcodeQr" class="btn-primary" style="padding: 12px 24px;">📥 Unduh Gambar Barcode (.png)</button>
         </div>
