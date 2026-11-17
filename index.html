@@ -41,7 +41,7 @@
       <section class="hero-banner">
         <span class="pill-tag">Status: Terhubung ke Sistem Kiosk</span>
         <h2>Daftar Menu Aktif di Kiosk</h2>
-        <p>Menu di bawah ini tersinkronisasi otomatis dengan halaman pemesanan client.</p>
+        <p>Menu & pengaturan toko di bawah ini akan otomatis terbawa saat pelanggan memindai Barcode (QR Code).</p>
       </section>
 
       <div class="search-section">
@@ -83,11 +83,15 @@
         <div id="tabContentStore" class="admin-tab-content">
           <div class="form-group">
             <label>Nama Toko</label>
-            <input type="text" id="settingStoreName" placeholder="Contoh: Kedai Nusantara">
+            <input type="text" id="settingStoreName" placeholder="Contoh: Caffe Santai">
           </div>
           <div class="form-group">
             <label>Singkatan Logo (2-3 Huruf)</label>
-            <input type="text" id="settingStoreLogo" placeholder="Contoh: KN">
+            <input type="text" id="settingStoreLogo" placeholder="Contoh: CS">
+          </div>
+          <div class="form-group">
+            <label>Nomor WhatsApp Penerima Pesanan (Format 628...)</label>
+            <input type="text" id="settingStoreWa" placeholder="Contoh: 6287877611218">
           </div>
           <button type="button" id="btnSaveStoreSettings" class="btn-primary btn-full" style="margin-bottom: 20px;">Simpan Identitas Toko</button>
 
@@ -144,10 +148,19 @@
         </div>
 
         <!-- TAB 3: UNDUH BARCODE -->
-        <div id="tabContentBarcode" class="admin-tab-content" style="display: none; text-align: center; padding: 20px 0;">
+        <div id="tabContentBarcode" class="admin-tab-content" style="display: none; text-align: center; padding: 10px 0;">
           <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">Barcode Akses Menu Client</h4>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Unduh QR Code ini agar pelanggan dapat memindai dan langsung membuka halaman menu pemesanan di HP mereka.</p>
-          <div id="hiddenQrRender" style="display: none;"></div>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 14px;">Setiap kali Anda mengubah <strong>Pengaturan Toko</strong> atau <strong>Kelola Menu</strong>, unduh ulang QR Code di bawah agar data terbaru langsung masuk ke tampilan Client saat dipindai.</p>
+          
+          <div class="form-group" style="text-align: left; margin-bottom: 14px;">
+            <label>URL Halaman Client (Vercel)</label>
+            <input type="text" id="settingClientUrl" value="https://aplikasi-umkm-five.vercel.app/" placeholder="https://aplikasi-umkm-five.vercel.app/">
+          </div>
+
+          <div id="qrPreviewBox" style="background: #ffffff; padding: 14px; border-radius: 12px; display: inline-block; margin-bottom: 16px;">
+            <div id="hiddenQrRender"></div>
+          </div>
+          <br>
           <button type="button" id="btnDownloadBarcodeQr" class="btn-primary" style="padding: 12px 24px;">📥 Unduh Gambar Barcode (.png)</button>
         </div>
 
@@ -157,6 +170,8 @@
 
   <div id="toastNotif" class="toast">Notifikasi</div>
 
+  <!-- LZ-String untuk kompresi data ke URL QR Code -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="script.js"></script>
 </body>
