@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Admin - Kelola Pemesanan</title>
   <meta property="og:title" content="Panel Admin - Kelola Pemesanan">
-  <meta property="og:description" content="Panel kontrol admin untuk mengelola menu dan ekspor barcode toko.">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
@@ -63,7 +62,7 @@
       <section class="hero-banner">
         <span class="pill-tag">MODE PANEL ADMIN</span>
         <h2>Kelola Menu & Ekspor Barcode</h2>
-        <p>Gunakan ikon roda gigi di kanan atas untuk mengatur toko, menambah menu, atau mengunduh gambar Barcode QR untuk Client.</p>
+        <p>Atur identitas toko, QRIS pembayaran, tambah menu, dan unduh barcode QR untuk client.</p>
       </section>
 
       <section class="search-section">
@@ -85,7 +84,7 @@
       <section class="menu-grid" id="menuContainer"></section>
     </main>
 
-    <!-- Modal Panel Pengaturan Admin dengan 3 Tab Menu -->
+    <!-- Modal Panel Pengaturan Admin -->
     <div class="modal-backdrop" id="settingsModal">
       <div class="modal-card" style="max-width: 760px; padding: 28px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 14px;">
@@ -96,26 +95,38 @@
           <button class="close-btn" id="btnCloseSettingsModal">&times;</button>
         </div>
 
-        <!-- TAB NAVIGASI 3 MENU -->
+        <!-- TAB NAVIGASI -->
         <div class="admin-tabs-nav">
-          <button class="admin-tab-btn active" data-tab="store">⚙️ Pengaturan Toko</button>
+          <button class="admin-tab-btn active" data-tab="store">⚙️ Pengaturan Toko & QRIS</button>
           <button class="admin-tab-btn" data-tab="menu">🍔 Kelola Menu</button>
           <button class="admin-tab-btn" data-tab="barcode">📥 Unduh Barcode</button>
         </div>
 
         <div style="max-height: 65vh; overflow-y: auto; padding-right: 4px;">
           
-          <!-- TAB 1: PENGATURAN TOKO -->
+          <!-- TAB 1: PENGATURAN TOKO & QRIS -->
           <div id="tabContentStore" class="admin-tab-content active">
-            <div style="background: var(--bg-elevated); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+            <div style="background: var(--bg-elevated); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 16px;">
               <h3 style="color: var(--accent); font-size: 1.05rem; margin-bottom: 14px;">Identitas Toko</h3>
               <div class="form-group"><label>Nama Toko</label><input type="text" id="settingStoreName"></div>
               <div class="form-group"><label>Singkatan Logo</label><input type="text" id="settingStoreLogo" maxlength="3"></div>
               <button class="btn-primary btn-full" id="btnSaveStoreSettings">Simpan Identitas Toko</button>
             </div>
+
+            <div style="background: var(--bg-elevated); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+              <h3 style="color: var(--accent); font-size: 1.05rem; margin-bottom: 14px;">Pengaturan Gambar QRIS Pembayaran</h3>
+              <div class="form-group">
+                <label>Unggah Gambar QRIS Toko</label>
+                <input type="file" id="settingQrisImgFile" accept="image/*" style="background: var(--bg-dark); border: 1px solid var(--border-color); padding: 10px; border-radius: 10px; width: 100%; color: var(--text-main);">
+              </div>
+              <div style="text-align: center; margin-bottom: 14px;">
+                <img id="previewQrisAdmin" src="" alt="Preview QRIS" style="max-width: 160px; border-radius: 8px; border: 1px solid var(--border-color); display: none;">
+              </div>
+              <button class="btn-primary btn-full" id="btnSaveQrisSettings">Simpan Gambar QRIS</button>
+            </div>
           </div>
 
-          <!-- TAB 2: KELOLA MENU (Tambah & Daftar) -->
+          <!-- TAB 2: KELOLA MENU -->
           <div id="tabContentMenu" class="admin-tab-content" style="display: none;">
             <div style="display: flex; flex-direction: column; gap: 16px;">
               <div style="background: var(--bg-elevated); padding: 18px; border-radius: 12px; border: 1px solid var(--border-color);">
@@ -141,7 +152,7 @@
               </div>
 
               <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px;">
-                <h3 style="color: var(--accent); font-size: 1.05rem; margin-bottom: 12px;">📋 Daftar Menu Tambahan Kustom</h3>
+                <h3 style="color: var(--accent); font-size: 1.05rem; margin-bottom: 12px;">📋 Daftar Menu Kustom</h3>
                 <div id="customMenuListAdmin"></div>
               </div>
             </div>
@@ -151,7 +162,7 @@
           <div id="tabContentBarcode" class="admin-tab-content" style="display: none;">
             <div style="background: var(--bg-elevated); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
               <h3 style="color: var(--accent); font-size: 1.1rem; margin-bottom: 8px;">Unduh Barcode Menu untuk Client</h3>
-              <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">Klik tombol di bawah untuk langsung mengunduh gambar Barcode QR (.png) berisi nama toko, menu, dan foto asli untuk Client.</p>
+              <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">Klik tombol di bawah untuk mengunduh gambar Barcode QR (.png) menuju Link Vercel Client.</p>
               <button class="btn-primary btn-full" id="btnDownloadBarcodeQr" style="padding: 14px; font-size: 1rem;">📥 Unduh Gambar Barcode Menu (.PNG)</button>
             </div>
           </div>
@@ -162,7 +173,6 @@
   </div>
 
   <div id="hiddenQrRender" style="position: fixed; left: -9999px; top: -9999px;"></div>
-
   <div class="toast" id="toastNotif">Berhasil!</div>
   <script src="script.js"></script>
 </body>
