@@ -11,6 +11,7 @@ let DATA_MENU = [...menuCustom];
 let kataKunciCari = "";
 let kataKunciCariAdminModal = "";
 let editMenuIndex = null;
+let tempUploadedImage = "";
 
 const DAFTAR_KATEGORI = [
   { id: "semua", nama: "Semua Menu" },
@@ -40,6 +41,7 @@ function formatRupiah(angka) {
 }
 
 function simpanStateLocal() {
+  // Menyimpan ke localStorage agar otomatis terbaca oleh Client di domain Vercel
   localStorage.setItem("umkm_menu_custom", JSON.stringify(menuCustom));
   localStorage.setItem("umkm_store_identity", JSON.stringify(storeIdentity));
 }
@@ -150,6 +152,7 @@ function mulaiEditMenuCustom(index) {
   document.getElementById("addMenuCategory").value = item.kategori;
   document.getElementById("addMenuPrice").value = item.harga;
   document.getElementById("addMenuDesc").value = item.deskripsi;
+  tempUploadedImage = item.gambar;
   document.getElementById("formMenuHeaderTitle").textContent = `✏️ Edit Menu: ${item.nama}`;
   document.getElementById("btnSaveNewMenu").textContent = "💾 Simpan Perubahan";
   tampilkanToast(`Mode Edit: ${item.nama}`);
@@ -220,7 +223,6 @@ function inisisasiAplikasiUtama() {
     document.getElementById("settingsModal").classList.remove("active");
   });
 
-  // FUNGSI TAB NAVIGASI MODAL ADMIN (AGAR BISA DIKLIK)
   const tabButtons = document.querySelectorAll(".admin-tab-btn");
   const tabContents = {
     store: document.getElementById("tabContentStore"),
@@ -231,14 +233,10 @@ function inisisasiAplikasiUtama() {
   tabButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       tabButtons.forEach(b => b.classList.remove("active"));
-      Object.values(tabContents).forEach(tc => {
-        if (tc) tc.style.display = "none";
-      });
+      Object.values(tabContents).forEach(tc => { if (tc) tc.style.display = "none"; });
       btn.classList.add("active");
       const targetTab = btn.getAttribute("data-tab");
-      if (tabContents[targetTab]) {
-        tabContents[targetTab].style.display = "block";
-      }
+      if (tabContents[targetTab]) tabContents[targetTab].style.display = "block";
     });
   });
 
@@ -271,7 +269,6 @@ function inisisasiAplikasiUtama() {
     tampilkanToast("✓ Gambar QRIS berhasil disimpan!");
   });
 
-  let tempUploadedImage = null;
   document.getElementById("addMenuImageFile").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -313,10 +310,11 @@ function inisisasiAplikasiUtama() {
       tampilkanToast("✓ Menu ditambahkan!");
     }
 
-    tempUploadedImage = null;
+    tempUploadedImage = "";
     document.getElementById("addMenuName").value = "";
     document.getElementById("addMenuPrice").value = "";
     document.getElementById("addMenuDesc").value = "";
+    document.getElementById("addMenuImageFile").value = "";
     document.getElementById("formMenuHeaderTitle").textContent = "Tambah Menu Baru & Unggah Foto";
     document.getElementById("btnSaveNewMenu").textContent = "Simpan & Perbarui Data";
 
