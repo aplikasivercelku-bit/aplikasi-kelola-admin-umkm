@@ -320,7 +320,6 @@ function inisisasiAplikasiUtama() {
   document.getElementById("settingStoreName").value = storeIdentity.name;
   document.getElementById("settingStoreLogo").value = storeIdentity.logo;
 
-  // Pastikan form input foto file lama dihapus dan sepenuhnya menggunakan Link URL + tombol converter
   const formMenuBox = document.getElementById("tabContentMenu");
   if (formMenuBox) {
     const oldFileInputContainer = document.getElementById("addMenuImageFile")?.parentElement;
@@ -341,8 +340,8 @@ function inisisasiAplikasiUtama() {
     importDiv.style.cssText = "margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);";
     importDiv.innerHTML = `
       <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: var(--text-main);">📥 Import Data Barcode / JSON</h4>
-      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Unggah file gambar Barcode (.png/.jpg) atau file JSON untuk memulihkan data toko dan menu.</p>
-      <input type="file" id="importAdminJsonInput" accept=".png,.jpg,.jpeg,.json" style="width: 100%; margin-bottom: 10px; font-size: 0.85rem; color: var(--text-main);">
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Unggah file gambar Barcode (.png/.jpg/.jpeg/.webp) atau file JSON untuk memulihkan data toko dan menu.</p>
+      <input type="file" id="importAdminJsonInput" accept=".png,.jpg,.jpeg,.webp,.json" style="width: 100%; margin-bottom: 10px; font-size: 0.85rem; color: var(--text-main);">
       <button id="btnProcessImportAdmin" type="button" style="width: 100%; padding: 11px; border-radius: 12px; background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-main); font-weight: 700; cursor: pointer;">Proses Import Data</button>
     `;
     tabBarcodeBox.appendChild(importDiv);
@@ -350,7 +349,7 @@ function inisisasiAplikasiUtama() {
     document.getElementById("btnProcessImportAdmin").addEventListener("click", async () => {
       const fileInput = document.getElementById("importAdminJsonInput");
       if (fileInput.files.length === 0) {
-        alert("Pilih file gambar Barcode (.png/.jpg) atau JSON terlebih dahulu!");
+        alert("Pilih file gambar Barcode (.png/.jpg/.jpeg/.webp) atau JSON terlebih dahulu!");
         return;
       }
 
@@ -414,7 +413,7 @@ function inisisasiAplikasiUtama() {
         return;
       }
 
-      // Jika file berupa Gambar (PNG/JPG), coba scan QR code via Html5Qrcode, atau baca metadata ekor file
+      // Jika file berupa Gambar (PNG/JPG/JPEG/WEBP)
       try {
         const html5QrCode = new Html5Qrcode("hiddenQrRender");
         const decodedText = await html5QrCode.scanFile(file, true);
@@ -423,7 +422,7 @@ function inisisasiAplikasiUtama() {
         const parsedData = JSON.parse(decodedText);
         if (terapkanDataImpor(parsedData)) return;
       } catch (err) {
-        // Fallback membaca metadata biner ekor file PNG
+        // Fallback: Membaca metadata biner ekor file PNG/JPG/JPEG
         const reader = new FileReader();
         reader.onload = function(ev) {
           const rawContent = ev.target.result;
