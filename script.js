@@ -3,7 +3,9 @@ const ADMIN_PASS_VALID = "Kernaden";
 let storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {
   name: "Kedai Nusantara",
   logo: "KN",
-  qrisText: "OLAN MAULANA Bank Mandiri 1630011235432"
+  wa: "6287877611218",
+  qrisText: "OLAN MAULANA Bank Mandiri 1630011235432",
+  clientUrl: "https://aplikasi-umkm-five.vercel.app/"
 };
 
 let menuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom")) || [];
@@ -41,6 +43,7 @@ function formatRupiah(angka) {
 function simpanStateLocal() {
   localStorage.setItem("umkm_menu_custom", JSON.stringify(menuCustom));
   localStorage.setItem("umkm_store_identity", JSON.stringify(storeIdentity));
+  renderQrPreview();
 }
 
 function tampilkanToast(pesan) {
@@ -49,6 +52,59 @@ function tampilkanToast(pesan) {
   toast.textContent = pesan;
   toast.classList.add("show");
   setTimeout(() => { toast.classList.remove("show"); }, 2400);
+}
+
+// Bangun URL lengkap berisi semua pengaturan toko & daftar menu yang terkompresi
+function buildSyncedClientUrl() {
+  const baseUrlInput = document.getElementById("settingClientUrl");
+  let baseUrl = (baseUrlInput && baseUrlInput.value.trim()) ? baseUrlInput.value.trim() : (storeIdentity.clientUrl || "https://aplikasi-umkm-five.vercel.app/");
+  if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+    baseUrl = "https://" + baseUrl;
+  }
+
+  const payload = {
+    s: {
+      n: storeIdentity.name,
+      l: storeIdentity.logo,
+      w: storeIdentity.wa || "6287877611218",
+      q: storeIdentity.qrisText || ""
+    },
+    m: menuCustom.map(item => ({
+      i: item.id,
+      n: item.nama,
+      k: item.kategori,
+      lk: item.labelKategori,
+      h: item.harga,
+      d: item.deskripsi,
+      g: item.gambar
+    }))
+  };
+
+  const jsonStr = JSON.stringify(payload);
+  let encoded = "";
+  if (typeof LZString !== "undefined") {
+    encoded = LZString.compressToEncodedURIComponent(jsonStr);
+  } else {
+    encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+  }
+
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${separator}data=${encoded}`;
+}
+
+function renderQrPreview() {
+  const hiddenContainer = document.getElementById("hiddenQrRender");
+  if (!hiddenContainer || typeof QRCode === "undefined") return;
+  const fullClientUrl = buildSyncedClientUrl();
+  hiddenContainer.innerHTML = "";
+  new QRCode(hiddenContainer, {
+    text: fullClientUrl,
+    width: 240,
+    height: 240,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.L
+  });
 }
 
 function renderMenu() {
@@ -68,7 +124,7 @@ function renderMenu() {
   container.innerHTML = "";
 
   if (menuTersaring.length === 0) {
-    container.innerHTML = `<div class="empty-search-state" style="text-align:center; padding:30px; color:var(--text-muted);"><p>Belum ada menu kustom.</p></div>`;
+    container.innerHTML = `<div class="empty-search-state" style="text-align:center; padding:30px; color:var(--text-muted);"><p>Belum ada menu kustom. Klik ikon ⚙️ di kanan atas untuk menambah menu.</p></div>`;
     return;
   }
 
@@ -201,12 +257,38 @@ document.addEventListener("DOMContentLoaded", () => {
 function inisisasiAplikasiUtama() {
   document.getElementById("settingStoreName").value = storeIdentity.name;
   document.getElementById("settingStoreLogo").value = storeIdentity.logo;
+  if (document.getElementById("settingStoreWa")) {
+    document.getElementById("settingStoreWa").value = storeIdentity.wa || "6287877611218";
+  }
   document.getElementById("settingQrisText").value = storeIdentity.qrisText || "";
+  if (document.getElementById("settingClientUrl")) {
+    document.getElementById("settingClientUrl").value = storeIdentity.clientUrl || "https://aplikasi-umkm-five.vercel.app/";
+  }
 
   renderMenu();
+  renderQrPreview();
+
+  const searchInput = document.getElementById("searchMenuInput");
+  const btnClearSearch = document.getElementById("btnClearSearch");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      kataKunciCari = e.target.value.trim();
+      if (btnClearSearch) btnClearSearch.style.display = kataKunciCari !== "" ? "flex" : "none";
+      renderMenu();
+    });
+  }
+  if (btnClearSearch) {
+    btnClearSearch.addEventListener("click", () => {
+      kataKunciCari = "";
+      searchInput.value = "";
+      btnClearSearch.style.display = "none";
+      renderMenu();
+    });
+  }
 
   document.getElementById("btnOpenSettings").addEventListener("click", () => {
     renderAdminCustomMenuList();
+    renderQrPreview();
     document.getElementById("settingsModal").classList.add("active");
   });
   document.getElementById("btnCloseSettingsModal").addEventListener("click", () => {
@@ -227,18 +309,29 @@ function inisisasiAplikasiUtama() {
       btn.classList.add("active");
       const targetTab = btn.getAttribute("data-tab");
       if (tabContents[targetTab]) tabContents[targetTab].style.display = "block";
+      if (targetTab === "barcode") renderQrPreview();
     });
   });
+
+  const clientUrlInput = document.getElementById("settingClientUrl");
+  if (clientUrlInput) {
+    clientUrlInput.addEventListener("input", (e) => {
+      storeIdentity.clientUrl = e.target.value.trim();
+      simpanStateLocal();
+    });
+  }
 
   document.getElementById("btnSaveStoreSettings").addEventListener("click", () => {
     const name = document.getElementById("settingStoreName").value.trim();
     const logo = document.getElementById("settingStoreLogo").value.trim();
+    const wa = document.getElementById("settingStoreWa") ? document.getElementById("settingStoreWa").value.trim() : "6287877611218";
     if (!name) return alert("Nama toko wajib diisi!");
     storeIdentity.name = name;
     storeIdentity.logo = logo || name.substring(0, 2).toUpperCase();
+    storeIdentity.wa = wa || "6287877611218";
     simpanStateLocal();
     applyStoreIdentity();
-    tampilkanToast("✓ Toko diperbarui!");
+    tampilkanToast("✓ Identitas toko diperbarui & siap di-barcode!");
   });
 
   document.getElementById("btnSaveQrisSettings").addEventListener("click", () => {
@@ -294,26 +387,32 @@ function inisisasiAplikasiUtama() {
 
   document.getElementById("btnDownloadBarcodeQr").addEventListener("click", () => {
     if (typeof QRCode === "undefined") return alert("Library QRCode belum termuat.");
-    const clientUrl = "https://aplikasi-umkm-five.vercel.app/";
-    const hiddenContainer = document.getElementById("hiddenQrRender");
-    hiddenContainer.innerHTML = "";
-    new QRCode(hiddenContainer, { text: clientUrl, width: 280, height: 280, colorDark: "#000000", colorLight: "#ffffff" });
+    const fullClientUrl = buildSyncedClientUrl();
+    const tempContainer = document.createElement("div");
+    new QRCode(tempContainer, {
+      text: fullClientUrl,
+      width: 360,
+      height: 360,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.L
+    });
 
     setTimeout(() => {
-      const qrCanvas = hiddenContainer.querySelector("canvas");
+      const qrCanvas = tempContainer.querySelector("canvas");
       if (qrCanvas) {
         const finalCanvas = document.createElement("canvas");
-        finalCanvas.width = 344; finalCanvas.height = 344;
+        finalCanvas.width = 424; finalCanvas.height = 424;
         const ctx = finalCanvas.getContext("2d");
-        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 344, 344);
-        ctx.drawImage(qrCanvas, 32, 32, 280, 280);
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 424, 424);
+        ctx.drawImage(qrCanvas, 32, 32, 360, 360);
         finalCanvas.toBlob((blob) => {
           const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
           link.download = `barcode_menu_${storeIdentity.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
           link.click();
-          tampilkanToast("✓ Barcode Berhasil Diunduh!");
+          tampilkanToast("✓ Barcode Tersinkronisasi Berhasil Diunduh!");
         }, "image/png");
       }
     }, 250);
