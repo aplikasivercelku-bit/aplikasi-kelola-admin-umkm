@@ -342,7 +342,7 @@ function inisisasiAplikasiUtama() {
       <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: var(--text-main);">📥 Import Data Barcode / JSON</h4>
       <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Unggah file gambar Barcode (.png/.jpg/.jpeg/.webp) atau file JSON untuk memulihkan data toko dan menu.</p>
       <input type="file" id="importAdminJsonInput" accept=".png,.jpg,.jpeg,.webp,.json" style="width: 100%; margin-bottom: 10px; font-size: 0.85rem; color: var(--text-main);">
-      <button id="btnProcessImportAdmin" type="button" style="width: 100%; padding: 11px; border-radius: 12px; background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-main); font-weight: 700; cursor: pointer;">Proses Import Data</button>
+      <button id="btnProcessImportAdmin" type="button" style="width: 100%; payload-btn; padding: 11px; border-radius: 12px; background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-main); font-weight: 700; cursor: pointer;">Proses Import Data</button>
     `;
     tabBarcodeBox.appendChild(importDiv);
 
@@ -356,6 +356,7 @@ function inisisasiAplikasiUtama() {
       const file = fileInput.files[0];
       tampilkanToast("Memproses file import...");
 
+      // Helper universal untuk memetakan data hasil impor ke format aplikasi
       const terapkanDataImpor = (parsedData) => {
         let listMenuParsed = [];
         if (parsedData && typeof parsedData === "object" && !Array.isArray(parsedData)) {
@@ -396,7 +397,7 @@ function inisisasiAplikasiUtama() {
         return false;
       };
 
-      // Jika file berupa JSON
+      // 1. Jika file berupa JSON murni
       if (file.name.endsWith(".json") || file.type === "application/json") {
         const reader = new FileReader();
         reader.onload = function(ev) {
@@ -413,16 +414,24 @@ function inisisasiAplikasiUtama() {
         return;
       }
 
-      // Jika file berupa Gambar (PNG/JPG/JPEG/WEBP)
+      // 2. Jika file berupa Gambar (PNG/JPG/JPEG/WEBP): 
+      // Prioritaskan pemindaian QR Code (agar gambar hasil kompresi WhatsApp tetap bisa dibaca isinya!)
       try {
         const html5QrCode = new Html5Qrcode("hiddenQrRender");
         const decodedText = await html5QrCode.scanFile(file, true);
         html5QrCode.clear();
         
-        const parsedData = JSON.parse(decodedText);
+        let parsedData;
+        try {
+          parsedData = JSON.parse(decodedText);
+        } catch (e) {
+          // Jika isi QR code berupa string biasa / payload lite, ubah ke format objek
+          parsedData = JSON.parse(decodeURIComponent(decodedText));
+        }
+
         if (terapkanDataImpor(parsedData)) return;
-      } catch (err) {
-        // Fallback: Membaca metadata biner ekor file PNG/JPG/JPEG
+      } catch (errScan) {
+        // 3. Fallback: Cek metadata ekor file biner (jika diunduh langsung tanpa kompresi WhatsApp)
         const reader = new FileReader();
         reader.onload = function(ev) {
           const rawContent = ev.target.result;
@@ -434,7 +443,7 @@ function inisisasiAplikasiUtama() {
               if (terapkanDataImpor(parsedData)) return;
             } catch (e) {}
           }
-          alert("Gagal memindai barcode dari file gambar ini. Pastikan mengunggah file Barcode resmi dari Admin.");
+          alert("Gagal memindai barcode dari file gambar ini. Pastikan file gambar memiliki QR Code yang jelas dan belum terpotong.");
         };
         reader.readAsText(file);
       }
