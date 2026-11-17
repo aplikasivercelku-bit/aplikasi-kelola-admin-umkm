@@ -1,8 +1,8 @@
 const ADMIN_PASS_VALID = "Kernaden";
 
 let storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {
-  name: "",
-  logo: ""
+  name: "Kedai Nusantara",
+  logo: "KN"
 };
 
 let menuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom")) || [];
@@ -88,7 +88,7 @@ function renderMenu() {
   container.innerHTML = "";
 
   if (menuTersaring.length === 0) {
-    container.innerHTML = `<div class="empty-search-state"><p>Belum ada menu kustom. Klik ikon roda gigi di pojok kanan atas untuk menambahkan menu.</p></div>`;
+    container.innerHTML = `<div class="empty-search-state"><p>Belum ada menu kustom.</p></div>`;
     return;
   }
 
@@ -139,18 +139,10 @@ function renderAdminCustomMenuList() {
     return;
   }
 
-  if (filteredList.length === 0) {
-    htmlContent += `<small style="color:var(--text-muted); display:block; text-align:center; padding: 10px;">Menu "${kataKunciCariAdminModal}" tidak ditemukan.</small>`;
-    container.innerHTML = htmlContent;
-    setupAdminSearchListener();
-    return;
-  }
-
   let itemsHtml = '<div style="display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px;">';
   
   filteredList.forEach((item) => {
     const realIndex = menuCustom.findIndex(m => m.id === item.id);
-
     itemsHtml += `
       <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-color); gap: 10px;">
         <div style="display:flex; align-items:center; gap:12px;">
@@ -191,7 +183,6 @@ function setupAdminSearchListener() {
 function mulaiEditMenuCustom(index) {
   const item = menuCustom[index];
   if (!item) return;
-
   editMenuIndex = index;
 
   document.getElementById("addMenuName").value = item.nama;
@@ -199,17 +190,12 @@ function mulaiEditMenuCustom(index) {
   document.getElementById("addMenuPrice").value = item.harga;
   
   const imgInputUrl = document.getElementById("addMenuImageUrl");
-  if (imgInputUrl) {
-    imgInputUrl.value = item.gambar.startsWith("http") ? item.gambar : "";
-  }
-
+  if (imgInputUrl) imgInputUrl.value = item.gambar.startsWith("http") ? item.gambar : "";
   document.getElementById("addMenuDesc").value = item.deskripsi;
 
   const formHeader = document.getElementById("formMenuHeaderTitle");
   if (formHeader) formHeader.textContent = `✏️ Edit Menu: ${item.nama}`;
-
-  const btnSave = document.getElementById("btnSaveNewMenu");
-  btnSave.textContent = "💾 Simpan Perubahan Menu";
+  document.getElementById("btnSaveNewMenu").textContent = "💾 Simpan Perubahan Menu";
 
   let btnCancel = document.getElementById("btnCancelEditMenu");
   if (!btnCancel) {
@@ -219,11 +205,9 @@ function mulaiEditMenuCustom(index) {
     btnCancel.textContent = "Batal Edit";
     btnCancel.style.cssText = "width: 100%; margin-top: 8px; padding: 11px; border-radius: 12px; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 700; cursor: pointer;";
     btnCancel.addEventListener("click", batalEditMenu);
-    btnSave.parentNode.appendChild(btnCancel);
+    document.getElementById("btnSaveNewMenu").parentNode.appendChild(btnCancel);
   }
   btnCancel.style.display = "block";
-
-  document.getElementById("formMenuHeaderTitle").scrollIntoView({ behavior: "smooth", block: "center" });
   tampilkanToast(`Mode Edit: ${item.nama}`);
 }
 
@@ -231,28 +215,16 @@ function batalEditMenu() {
   editMenuIndex = null;
   document.getElementById("addMenuName").value = "";
   document.getElementById("addMenuPrice").value = "";
-  const imgInputUrl = document.getElementById("addMenuImageUrl");
-  if (imgInputUrl) imgInputUrl.value = "";
   document.getElementById("addMenuDesc").value = "";
-
-  const formHeader = document.getElementById("formMenuHeaderTitle");
-  if (formHeader) formHeader.textContent = "Tambah Menu Baru & Link Gambar";
-
   const btnSave = document.getElementById("btnSaveNewMenu");
   if (btnSave) btnSave.textContent = "Simpan & Perbarui Data";
-
   const btnCancel = document.getElementById("btnCancelEditMenu");
   if (btnCancel) btnCancel.style.display = "none";
 }
 
 function hapusMenuCustom(index) {
   if (confirm("Yakin ingin menghapus menu ini?")) {
-    if (editMenuIndex === index) {
-      batalEditMenu();
-    } else if (editMenuIndex !== null && editMenuIndex > index) {
-      editMenuIndex--;
-    }
-
+    if (editMenuIndex === index) batalEditMenu();
     menuCustom.splice(index, 1);
     DATA_MENU = [...menuCustom];
     simpanStateLocal();
@@ -316,139 +288,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function inisisasiAplikasiUtama() {
   applyStoreIdentity();
-
   document.getElementById("settingStoreName").value = storeIdentity.name;
   document.getElementById("settingStoreLogo").value = storeIdentity.logo;
-
-  const formMenuBox = document.getElementById("tabContentMenu");
-  if (formMenuBox) {
-    const oldFileInputContainer = document.getElementById("addMenuImageFile")?.parentElement;
-    if (oldFileInputContainer) {
-      oldFileInputContainer.innerHTML = `
-        <label style="font-size:0.82rem; color:var(--text-muted); display:block; margin-bottom:4px;">Link Gambar (URL Eksternal)</label>
-        <input type="url" id="addMenuImageUrl" placeholder="https://..." style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; outline: none; margin-bottom: 6px;">
-        <small style="display: block; color: var(--text-muted); font-size: 0.75rem;">
-          Butuh link gambar? Gunakan konverter: <a href="https://sigmawire.net/image-to-url-converter" target="_blank" style="color: var(--accent); text-decoration: underline;">sigmawire.net/image-to-url-converter</a>
-        </small>
-      `;
-    }
-  }
-
-  const tabBarcodeBox = document.getElementById("tabContentBarcode");
-  if (tabBarcodeBox && !document.getElementById("importAdminJsonInput")) {
-    const importDiv = document.createElement("div");
-    importDiv.style.cssText = "margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);";
-    importDiv.innerHTML = `
-      <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: var(--text-main);">📥 Import Data Barcode / JSON</h4>
-      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Unggah file gambar Barcode (.png/.jpg/.jpeg/.webp) atau file JSON untuk memulihkan data toko dan menu.</p>
-      <input type="file" id="importAdminJsonInput" accept=".png,.jpg,.jpeg,.webp,.json" style="width: 100%; margin-bottom: 10px; font-size: 0.85rem; color: var(--text-main);">
-      <button id="btnProcessImportAdmin" type="button" style="width: 100%; payload-btn; padding: 11px; border-radius: 12px; background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-main); font-weight: 700; cursor: pointer;">Proses Import Data</button>
-    `;
-    tabBarcodeBox.appendChild(importDiv);
-
-    document.getElementById("btnProcessImportAdmin").addEventListener("click", async () => {
-      const fileInput = document.getElementById("importAdminJsonInput");
-      if (fileInput.files.length === 0) {
-        alert("Pilih file gambar Barcode (.png/.jpg/.jpeg/.webp) atau JSON terlebih dahulu!");
-        return;
-      }
-
-      const file = fileInput.files[0];
-      tampilkanToast("Memproses file import...");
-
-      // Helper universal untuk memetakan data hasil impor ke format aplikasi
-      const terapkanDataImpor = (parsedData) => {
-        let listMenuParsed = [];
-        if (parsedData && typeof parsedData === "object" && !Array.isArray(parsedData)) {
-          if (parsedData.store) {
-            storeIdentity = {
-              name: parsedData.store.name || storeIdentity.name,
-              logo: parsedData.store.logo || storeIdentity.logo
-            };
-            document.getElementById("settingStoreName").value = storeIdentity.name;
-            document.getElementById("settingStoreLogo").value = storeIdentity.logo;
-          }
-          if (Array.isArray(parsedData.menus)) {
-            listMenuParsed = parsedData.menus;
-          }
-        } else if (Array.isArray(parsedData)) {
-          listMenuParsed = parsedData;
-        }
-
-        if (listMenuParsed.length > 0) {
-          menuCustom = listMenuParsed.map(m => ({
-            id: m.id || Date.now() + Math.random(),
-            nama: m.n || m.nama || "Menu",
-            kategori: m.k || m.kategori || "kopi",
-            labelKategori: m.lk || m.labelKategori || "Menu",
-            harga: m.h || m.harga || 0,
-            deskripsi: m.d || m.deskripsi || "",
-            gambar: m.g || m.gambar || m.img || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(m.n || m.nama || "Menu")}`
-          }));
-
-          DATA_MENU = [...menuCustom];
-          simpanStateLocal();
-          applyStoreIdentity();
-          renderMenu();
-          renderAdminCustomMenuList();
-          tampilkanToast("✓ Berhasil Import Data Toko & Menu!");
-          return true;
-        }
-        return false;
-      };
-
-      // 1. Jika file berupa JSON murni
-      if (file.name.endsWith(".json") || file.type === "application/json") {
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-          try {
-            const parsed = JSON.parse(ev.target.result);
-            if (!terapkanDataImpor(parsed)) {
-              alert("Format data JSON tidak valid atau kosong.");
-            }
-          } catch (err) {
-            alert("Gagal membaca file JSON.");
-          }
-        };
-        reader.readAsText(file);
-        return;
-      }
-
-      // 2. Jika file berupa Gambar (PNG/JPG/JPEG/WEBP): 
-      // Prioritaskan pemindaian QR Code (agar gambar hasil kompresi WhatsApp tetap bisa dibaca isinya!)
-      try {
-        const html5QrCode = new Html5Qrcode("hiddenQrRender");
-        const decodedText = await html5QrCode.scanFile(file, true);
-        html5QrCode.clear();
-        
-        let parsedData;
-        try {
-          parsedData = JSON.parse(decodedText);
-        } catch (e) {
-          // Jika isi QR code berupa string biasa / payload lite, ubah ke format objek
-          parsedData = JSON.parse(decodeURIComponent(decodedText));
-        }
-
-        if (terapkanDataImpor(parsedData)) return;
-      } catch (errScan) {
-        // 3. Fallback: Cek metadata ekor file biner (jika diunduh langsung tanpa kompresi WhatsApp)
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-          const rawContent = ev.target.result;
-          const marker = "\n---UMKM_DATA_START---\n";
-          if (rawContent.includes(marker)) {
-            try {
-              const jsonPart = rawContent.split(marker)[1];
-              const parsedData = JSON.parse(jsonPart);
-              if (terapkanDataImpor(parsedData)) return;
-            } catch (e) {}
-          }
-          alert("Gagal memindai barcode dari file gambar ini. Pastikan file gambar memiliki QR Code yang jelas dan belum terpotong.");
-        };
-        reader.readAsText(file);
-      }
-    });
-  }
 
   DATA_MENU = [...menuCustom];
   renderMenu();
@@ -484,12 +325,9 @@ function inisisasiAplikasiUtama() {
     btn.addEventListener("click", () => {
       tabButtons.forEach(b => b.classList.remove("active"));
       Object.values(tabContents).forEach(tc => tc.style.display = "none");
-
       btn.classList.add("active");
       const targetTab = btn.getAttribute("data-tab");
-      if (tabContents[targetTab]) {
-        tabContents[targetTab].style.display = "block";
-      }
+      if (tabContents[targetTab]) tabContents[targetTab].style.display = "block";
     });
   });
 
@@ -503,17 +341,10 @@ function inisisasiAplikasiUtama() {
     batalEditMenu();
     settingsModal.classList.remove("active");
   });
-  settingsModal.addEventListener("click", (e) => {
-    if (e.target.id === "settingsModal") {
-      batalEditMenu();
-      settingsModal.classList.remove("active");
-    }
-  });
 
   document.getElementById("btnSaveStoreSettings").addEventListener("click", () => {
     const name = document.getElementById("settingStoreName").value.trim();
     const logo = document.getElementById("settingStoreLogo").value.trim();
-
     if (!name) { alert("Nama toko tidak boleh kosong!"); return; }
 
     storeIdentity = { name, logo: logo || name.substring(0, 2).toUpperCase() };
@@ -522,52 +353,35 @@ function inisisasiAplikasiUtama() {
     tampilkanToast("✓ Identitas toko diperbarui!");
   });
 
+  // FITUR UTAMA: QR CODE BERISI LINK URL WEBSITE CLIENT VERCEL ANDA
   document.getElementById("btnDownloadBarcodeQr").addEventListener("click", () => {
-    if (menuCustom.length === 0) {
-      alert("Belum ada menu kustom yang ditambahkan. Silakan tambahkan minimal 1 menu terlebih dahulu.");
-      return;
-    }
-
     if (typeof QRCode === "undefined") {
-      alert("Library QRCode belum termuat. Periksa koneksi internet.");
+      alert("Library QRCode belum termuat.");
       return;
     }
 
-    const qrLitePayload = {
-      store: { name: storeIdentity.name, logo: storeIdentity.logo },
-      menus: menuCustom.map(item => ({
-        id: item.id,
-        n: item.nama,
-        k: item.kategori,
-        lk: item.labelKategori,
-        h: item.harga,
-        d: item.deskripsi,
-        g: item.gambar
-      }))
-    };
-
-    const fullEmbedPayload = {
-      store: { name: storeIdentity.name, logo: storeIdentity.logo },
-      menus: menuCustom
-    };
+    // Masukkan Link URL Website Client Anda di sini (misal URL Vercel Client Anda)
+    const clientUrl = window.location.origin.includes("localhost") 
+      ? "https://aplikasi-umkm-five.vercel.app/" 
+      : window.location.origin + "/"; // Otomatis mendeteksi domain Vercel Anda
 
     const hiddenContainer = document.getElementById("hiddenQrRender");
     hiddenContainer.innerHTML = "";
 
     new QRCode(hiddenContainer, {
-      text: JSON.stringify(qrLitePayload),
+      text: clientUrl,
       width: 280,
       height: 280,
       colorDark: "#000000",
       colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.M
+      correctLevel: QRCode.CorrectLevel.H
     });
 
     setTimeout(() => {
       const qrCanvas = hiddenContainer.querySelector("canvas");
       const qrImg = hiddenContainer.querySelector("img");
 
-      const buatDanUnduhPng = (sourceDrawable) => {
+      const unduhCanvas = (drawable) => {
         const padding = 32;
         const finalCanvas = document.createElement("canvas");
         finalCanvas.width = 280 + padding * 2;
@@ -576,13 +390,10 @@ function inisisasiAplikasiUtama() {
 
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-        ctx.drawImage(sourceDrawable, padding, padding, 280, 280);
+        ctx.drawImage(drawable, padding, padding, 280, 280);
 
-        finalCanvas.toBlob((pngBlob) => {
-          const marker = "\n---UMKM_DATA_START---\n";
-          const combinedBlob = new Blob([pngBlob, marker, JSON.stringify(fullEmbedPayload)], { type: "image/png" });
-
-          const url = URL.createObjectURL(combinedBlob);
+        finalCanvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
           const safeStoreName = storeIdentity.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
@@ -591,17 +402,14 @@ function inisisasiAplikasiUtama() {
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
-
-          tampilkanToast("✓ Gambar Barcode QR + Link Foto berhasil diunduh!");
+          tampilkanToast("✓ Barcode Link URL Client Berhasil Diunduh!");
         }, "image/png");
       };
 
-      if (qrCanvas) {
-        buatDanUnduhPng(qrCanvas);
-      } else if (qrImg && qrImg.complete) {
-        buatDanUnduhPng(qrImg);
-      } else if (qrImg) {
-        qrImg.onload = () => buatDanUnduhPng(qrImg);
+      if (qrCanvas) unduhCanvas(qrCanvas);
+      else if (qrImg) {
+        if (qrImg.complete) unduhCanvas(qrImg);
+        else qrImg.onload = () => unduhCanvas(qrImg);
       }
     }, 250);
   });
@@ -610,7 +418,6 @@ function inisisasiAplikasiUtama() {
     const name = document.getElementById("addMenuName").value.trim();
     const kategori = document.getElementById("addMenuCategory").value;
     const harga = parseInt(document.getElementById("addMenuPrice").value);
-    const urlInput = document.getElementById("addMenuImageUrl");
     const desc = document.getElementById("addMenuDesc").value.trim();
 
     if (!name || isNaN(harga)) {
@@ -620,37 +427,33 @@ function inisisasiAplikasiUtama() {
 
     const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
     const labelKategori = katObj ? katObj.nama : "Lainnya";
-    
-    const gambarSrc = urlInput && urlInput.value.trim() !== "" ? urlInput.value.trim() : `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
+    const gambarSrc = `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
 
     if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
       menuCustom[editMenuIndex] = {
         ...menuCustom[editMenuIndex],
         nama: name,
-        kategori: kategori,
-        labelKategori: labelKategori,
-        harga: harga,
-        deskripsi: desc || "Menu pilihan kedai.",
-        gambar: gambarSrc
+        kategori,
+        labelKategori,
+        harga,
+        deskripsi: desc || "Menu pilihan kedai."
       };
-      tampilkanToast("✓ Perubahan menu berhasil disimpan!");
+      tampilkanToast("✓ Perubahan menu disimpan!");
     } else {
-      const newMenuItem = {
+      menuCustom.push({
         id: Date.now(),
         nama: name,
-        kategori: kategori,
-        labelKategori: labelKategori,
-        harga: harga,
+        kategori,
+        labelKategori,
+        harga,
         deskripsi: desc || "Menu pilihan kedai.",
         gambar: gambarSrc
-      };
-      menuCustom.push(newMenuItem);
-      tampilkanToast("✓ Menu berhasil ditambahkan!");
+      });
+      tampilkanToast("✓ Menu baru ditambahkan!");
     }
 
     DATA_MENU = [...menuCustom];
     simpanStateLocal();
-
     renderMenu();
     renderAdminCustomMenuList();
     batalEditMenu();
