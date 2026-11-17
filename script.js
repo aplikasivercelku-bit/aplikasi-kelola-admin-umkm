@@ -20,6 +20,7 @@ let storeIdentity = {
 
 let menuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom")) || [];
 let kataKunciCari = "";
+let kataKunciCariAdminModal = "";
 let editMenuIndex = null;
 
 const DAFTAR_KATEGORI = [
@@ -253,7 +254,8 @@ function bukaModalPengaturanToko() {
   document.getElementById("inputStoreLogo").value = storeIdentity.logo;
   document.getElementById("inputStoreWa").value = storeIdentity.wa;
   document.getElementById("inputStoreQris").value = storeIdentity.qrisText || "";
-  document.getElementById("inputClientUrl").value = storeIdentity.clientUrl || "";
+  const clientUrlInput = document.getElementById("inputClientUrl");
+  if (clientUrlInput) clientUrlInput.value = storeIdentity.clientUrl || "";
   document.getElementById("storeModal").classList.add("active");
 }
 
@@ -269,7 +271,8 @@ function simpanPengaturanToko(e) {
   storeIdentity.logo = document.getElementById("inputStoreLogo").value.trim() || "cs";
   storeIdentity.wa = document.getElementById("inputStoreWa").value.trim() || "6287877611218";
   storeIdentity.qrisText = document.getElementById("inputStoreQris").value.trim() || "";
-  storeIdentity.clientUrl = document.getElementById("inputClientUrl").value.trim() || "https://aplikasi-umkm-five.vercel.app/";
+  const clientUrlInput = document.getElementById("inputClientUrl");
+  if (clientUrlInput) storeIdentity.clientUrl = clientUrlInput.value.trim() || "https://aplikasi-umkm-five.vercel.app/";
 
   sinkronKeCloud();
   applyStoreIdentity();
@@ -278,11 +281,11 @@ function simpanPengaturanToko(e) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const isAdminLogged = localStorage.getItem("umkm_admin_logged") === "true";
   const loginSection = document.getElementById("loginSection");
   const mainPanel = document.getElementById("mainPanel");
   const loginForm = document.getElementById("loginForm");
 
+  const isAdminLogged = localStorage.getItem("umkm_admin_logged") === "true";
   if (isAdminLogged) {
     if (loginSection) loginSection.style.display = "none";
     if (mainPanel) mainPanel.style.display = "block";
