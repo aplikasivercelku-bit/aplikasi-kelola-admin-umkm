@@ -41,7 +41,6 @@ function formatRupiah(angka) {
 }
 
 function simpanStateLocal() {
-  // Menyimpan ke localStorage agar otomatis terbaca oleh Client di domain Vercel
   localStorage.setItem("umkm_menu_custom", JSON.stringify(menuCustom));
   localStorage.setItem("umkm_store_identity", JSON.stringify(storeIdentity));
 }
@@ -71,7 +70,7 @@ function renderMenu() {
   container.innerHTML = "";
 
   if (menuTersaring.length === 0) {
-    container.innerHTML = `<div class="empty-search-state"><p>Belum ada menu kustom.</p></div>`;
+    container.innerHTML = `<div class="empty-search-state" style="text-align:center; padding:30px; color:var(--text-muted);"><p>Belum ada menu kustom. Silakan tambah menu baru melalui tombol pengaturan (⚙️).</p></div>`;
     return;
   }
 
@@ -111,7 +110,7 @@ function renderAdminCustomMenuList() {
     return;
   }
 
-  let itemsHtml = '<div style="display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px;">';
+  let itemsHtml = '<div style="display: flex; flexDirection: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px;">';
   filteredList.forEach((item) => {
     const realIndex = menuCustom.findIndex(m => m.id === item.id);
     itemsHtml += `
@@ -124,8 +123,8 @@ function renderAdminCustomMenuList() {
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:6px;">
-          <button onclick="mulaiEditMenuCustom(${realIndex})" style="padding: 6px 12px; font-size: 0.8rem; background: rgba(245, 158, 11, 0.15); border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; cursor: pointer; font-weight: 600;">Edit</button>
-          <button onclick="hapusMenuCustom(${realIndex})" style="padding: 6px 12px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); color: var(--danger); border-radius: 8px; cursor: pointer; font-weight: 600;">Hapus</button>
+          <button type="button" onclick="mulaiEditMenuCustom(${realIndex})" style="padding: 6px 12px; font-size: 0.8rem; background: rgba(245, 158, 11, 0.15); border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; cursor: pointer; font-weight: 600;">Edit</button>
+          <button type="button" onclick="hapusMenuCustom(${realIndex})" style="padding: 6px 12px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); color: var(--danger); border-radius: 8px; cursor: pointer; font-weight: 600;">Hapus</button>
         </div>
       </div>
     `;
