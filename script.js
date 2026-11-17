@@ -62,6 +62,7 @@ function buildSyncedClientUrl() {
     baseUrl = "https://" + baseUrl;
   }
 
+  // Payload ringkas agar QR Code tetap mudah dipindai
   const payload = {
     s: {
       n: storeIdentity.name,
@@ -219,6 +220,257 @@ function hapusMenuCustom(index) {
     renderAdminCustomMenuList();
     tampilkanToast("✓ Menu dihapus!");
   }
+}
+
+// Helper menggambar kotak sudut melengkung pada Canvas
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+// Fungsi Download Barcode berdesain kartu profesional lengkap dengan latar belakang geometris modern ala QRIS
+function downloadStyledBarcodeCard() {
+  if (typeof QRCode === "undefined") return alert("Library QRCode belum termuat.");
+  const fullClientUrl = buildSyncedClientUrl();
+  const tempContainer = document.createElement("div");
+  new QRCode(tempContainer, {
+    text: fullClientUrl,
+    width: 360,
+    height: 360,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.L
+  });
+
+  setTimeout(() => {
+    const qrCanvas = tempContainer.querySelector("canvas");
+    if (!qrCanvas) return alert("Gagal merender QR Code.");
+
+    const W = 640;
+    const H = 920;
+    const finalCanvas = document.createElement("canvas");
+    finalCanvas.width = W;
+    finalCanvas.height = H;
+    const ctx = finalCanvas.getContext("2d");
+
+    // 1. Latar Belakang Luar Biru Lembut Modern (seperti bingkai standar kartu QRIS)
+    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+    bgGrad.addColorStop(0, "#60a5fa");
+    bgGrad.addColorStop(0.5, "#3b82f6");
+    bgGrad.addColorStop(1, "#2563eb");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // 2. Kartu Utama Putih Bersih dengan Sudut Melengkung
+    const cardX = 36;
+    const cardY = 36;
+    const cardW = W - 72;
+    const cardH = H - 72;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0, 0, 0, 0.22)";
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 10;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, cardX, cardY, cardW, cardH, 28);
+    ctx.fill();
+    ctx.restore();
+
+    // Kliping area di dalam kartu putih untuk motif dekoratif
+    ctx.save();
+    roundRect(ctx, cardX, cardY, cardW, cardH, 28);
+    ctx.clip();
+
+    // 3. Motif Geometris Halus di Bagian Bawah Kartu
+    ctx.strokeStyle = "rgba(203, 213, 225, 0.45)";
+    ctx.lineWidth = 2;
+    for (let gx = cardX; gx < cardX + cardW; gx += 40) {
+      for (let gy = 480; gy < cardY + cardH; gy += 40) {
+        ctx.strokeRect(gx + 6, gy + 6, 28, 28);
+        ctx.beginPath();
+        ctx.moveTo(gx + 20, gy);
+        ctx.lineTo(gx + 20, gy + 40);
+        ctx.moveTo(gx, gy + 20);
+        ctx.lineTo(gx + 40, gy + 20);
+        ctx.stroke();
+      }
+    }
+
+    // 4. Aksen Segitiga Merah Khas Kartu QRIS (Sisi Kiri Tengah & Sudut Kanan Bawah)
+    ctx.fillStyle = "#ef4444";
+    ctx.beginPath();
+    ctx.moveTo(cardX, 230);
+    ctx.lineTo(cardX + 75, 320);
+    ctx.lineTo(cardX, 410);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(cardX + cardW, cardY + cardH - 170);
+    ctx.lineTo(cardX + cardW, cardY + cardH);
+    ctx.lineTo(cardX + cardW - 170, cardY + cardH);
+    ctx.closePath();
+    ctx.fill();
+
+    // Aksen pita emas kecil di sudut kanan bawah
+    ctx.fillStyle = "#f59e0b";
+    ctx.beginPath();
+    ctx.moveTo(cardX + cardW, cardY + cardH - 195);
+    ctx.lineTo(cardX + cardW, cardY + cardH - 170);
+    ctx.lineTo(cardX + cardW - 170, cardY + cardH);
+    ctx.lineTo(cardX + cardW - 195, cardY + cardH);
+    ctx.closePath();
+    ctx.fill();
+
+    // 5. Header Kartu: Badge Logo Singkatan Toko + Judul Menu Digital & Badge Kanan
+    const logoText = (storeIdentity.logo || "KN").toUpperCase();
+    const logoBoxX = cardX + 36;
+    const logoBoxY = cardY + 34;
+
+    const logoGrad = ctx.createLinearGradient(logoBoxX, logoBoxY, logoBoxX + 64, logoBoxY + 64);
+    logoGrad.addColorStop(0, "#f59e0b");
+    logoGrad.addColorStop(1, "#b45309");
+    ctx.fillStyle = logoGrad;
+    roundRect(ctx, logoBoxX, logoBoxY, 64, 64, 16);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 24px 'Segoe UI', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(logoText, logoBoxX + 32, logoBoxY + 33);
+
+    // Teks Header Kiri
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "900 22px 'Segoe UI', sans-serif";
+    ctx.fillText("MENU DIGITAL", logoBoxX + 78, logoBoxY + 22);
+
+    ctx.fillStyle = "#475569";
+    ctx.font = "600 13px 'Segoe UI', sans-serif";
+    ctx.fillText("Pesan Cepat Tanpa Antre", logoBoxX + 78, logoBoxY + 46);
+
+    // Emblem Kanan Atas (Ikon Scan Order)
+    const badgeRightX = cardX + cardW - 110;
+    const badgeRightY = cardY + 38;
+    ctx.fillStyle = "#fef2f2";
+    roundRect(ctx, badgeRightX, badgeRightY, 74, 54, 12);
+    ctx.fill();
+    ctx.strokeStyle = "#fecaca";
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, badgeRightX, badgeRightY, 74, 54, 12);
+    ctx.stroke();
+
+    ctx.fillStyle = "#dc2626";
+    ctx.font = "900 15px 'Segoe UI', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("SCAN", badgeRightX + 37, badgeRightY + 21);
+    ctx.fillStyle = "#1e3a8a";
+    ctx.font = "800 12px 'Segoe UI', sans-serif";
+    ctx.fillText("ORDER", badgeRightX + 37, badgeRightY + 39);
+
+    // Garis Pemisah Header Tipis
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 36, cardY + 118);
+    ctx.lineTo(cardX + cardW - 36, cardY + 118);
+    ctx.stroke();
+
+    // 6. Nama Toko Besar di Tengah Atas (Mengambil dari Pengaturan Admin)
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "900 28px 'Segoe UI', sans-serif";
+    ctx.fillText(storeIdentity.name.toUpperCase(), W / 2, cardY + 162);
+
+    // Sub-judul Keterangan QRIS / Rekening Pembayaran (Mengambil dari Pengaturan Admin)
+    const qrisInfo = storeIdentity.qrisText || "OLAN MAULANA Bank Mandiri 1630011235432";
+    ctx.fillStyle = "#475569";
+    ctx.font = "600 14px 'Segoe UI', sans-serif";
+    if (qrisInfo.length > 48) {
+      ctx.fillText(qrisInfo.substring(0, 48), W / 2, cardY + 194);
+      ctx.fillText(qrisInfo.substring(48), W / 2, cardY + 214);
+    } else {
+      ctx.fillText(qrisInfo, W / 2, cardY + 196);
+    }
+
+    // 7. Bingkai Putih Bersih & Gambar QR Code di Tengah Kartu
+    const qrBoxSize = 370;
+    const qrBoxX = (W - qrBoxSize) / 2;
+    const qrBoxY = cardY + 236;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.08)";
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 20);
+    ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 2;
+    roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 20);
+    ctx.stroke();
+    ctx.restore();
+
+    // Render QR Code di dalam bingkai putih
+    ctx.drawImage(qrCanvas, qrBoxX + 20, qrBoxY + 20, qrBoxSize - 40, qrBoxSize - 40);
+
+    // Badge Singkatan Logo Toko di Tengah-Tengah QR Code
+    const centerBadgeSize = 54;
+    const centerX = W / 2 - centerBadgeSize / 2;
+    const centerY = qrBoxY + qrBoxSize / 2 - centerBadgeSize / 2;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, centerX - 4, centerY - 4, centerBadgeSize + 8, centerBadgeSize + 8, 14);
+    ctx.fill();
+
+    ctx.fillStyle = "#0f172a";
+    roundRect(ctx, centerX, centerY, centerBadgeSize, centerBadgeSize, 11);
+    ctx.fill();
+
+    ctx.fillStyle = "#f59e0b";
+    ctx.font = "900 18px 'Segoe UI', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(logoText, W / 2, qrBoxY + qrBoxSize / 2 + 1);
+
+    // 8. Teks Ajakan Bawah
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "900 18px 'Segoe UI', sans-serif";
+    ctx.fillText("SATU BARCODE UNTUK SEMUA MENU", W / 2, qrBoxY + qrBoxSize + 38);
+
+    ctx.fillStyle = "#475569";
+    ctx.font = "500 13px 'Segoe UI', sans-serif";
+    ctx.fillText("Scan menggunakan Kamera HP / Google Lens untuk memesan", W / 2, qrBoxY + qrBoxSize + 64);
+
+    // 9. Footer Kiri Bawah (Informasi Dicetak & WhatsApp Toko)
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#334155";
+    ctx.font = "600 12px 'Segoe UI', sans-serif";
+    ctx.fillText(`Dicetak oleh: ${storeIdentity.name}`, cardX + 36, cardY + cardH - 48);
+    ctx.fillStyle = "#64748b";
+    ctx.font = "500 12px 'Segoe UI', sans-serif";
+    ctx.fillText(`WhatsApp Pesanan: +${storeIdentity.wa || "6287877611218"}`, cardX + 36, cardY + cardH - 28);
+
+    ctx.restore();
+
+    // 10. Unduh Hasil Kartu PNG
+    finalCanvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kartu_barcode_${storeIdentity.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
+      link.click();
+      tampilkanToast("✓ Kartu Barcode Berlatar Belakang Berhasil Diunduh!");
+    }, "image/png");
+  }, 250);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -385,36 +637,5 @@ function inisisasiAplikasiUtama() {
     renderAdminCustomMenuList();
   });
 
-  document.getElementById("btnDownloadBarcodeQr").addEventListener("click", () => {
-    if (typeof QRCode === "undefined") return alert("Library QRCode belum termuat.");
-    const fullClientUrl = buildSyncedClientUrl();
-    const tempContainer = document.createElement("div");
-    new QRCode(tempContainer, {
-      text: fullClientUrl,
-      width: 360,
-      height: 360,
-      colorDark: "#000000",
-      colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.L
-    });
-
-    setTimeout(() => {
-      const qrCanvas = tempContainer.querySelector("canvas");
-      if (qrCanvas) {
-        const finalCanvas = document.createElement("canvas");
-        finalCanvas.width = 424; finalCanvas.height = 424;
-        const ctx = finalCanvas.getContext("2d");
-        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 424, 424);
-        ctx.drawImage(qrCanvas, 32, 32, 360, 360);
-        finalCanvas.toBlob((blob) => {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `barcode_menu_${storeIdentity.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
-          link.click();
-          tampilkanToast("✓ Barcode Tersinkronisasi Berhasil Diunduh!");
-        }, "image/png");
-      }
-    }, 250);
-  });
+  document.getElementById("btnDownloadBarcodeQr").addEventListener("click", downloadStyledBarcodeCard);
 }
