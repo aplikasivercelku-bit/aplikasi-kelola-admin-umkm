@@ -1,13 +1,12 @@
 const ADMIN_PASS_VALID = "Kernaden";
 
 let storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {
-  name: "Caffe Santai HAHAHA",
-  logo: "CS",
+  name: "Kedai Nusantara",
+  logo: "KN",
   qrisText: "OLAN MAULANA Bank Mandiri 1630011235432"
 };
 
 let menuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom")) || [];
-let DATA_MENU = [...menuCustom];
 let kataKunciCari = "";
 let kataKunciCariAdminModal = "";
 let editMenuIndex = null;
