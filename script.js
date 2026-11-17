@@ -23,13 +23,9 @@ const DAFTAR_KATEGORI = [
   { id: "tambahan", nama: "Tambahan / Topping" }
 ];
 
-// Fungsi bantu untuk merapikan link gambar (terutama ImgBB agar jadi direct link jika diperlukan)
 function formatDirectImageUrl(url) {
   if (!url) return "";
-  let cleanUrl = url.trim();
-  // Jika pengguna memasukkan link viewer ibb.co, ubah ke format penampil langsung jika memungkinkan, 
-  // atau biarkan jika sudah berupa direct link.
-  return cleanUrl;
+  return url.trim();
 }
 
 function applyStoreIdentity() {
@@ -402,6 +398,7 @@ function inisisasiAplikasiUtama() {
         return false;
       };
 
+      // Jika file berupa JSON
       if (file.name.endsWith(".json") || file.type === "application/json") {
         const reader = new FileReader();
         reader.onload = function(ev) {
@@ -418,39 +415,33 @@ function inisisasiAplikasiUtama() {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = async function(ev) {
-        const rawContent = ev.target.result;
-        const marker = "\n---UMKM_DATA_START---\n";
-
-        let parsedData = null;
-        if (rawContent.includes(marker)) {
-          try {
-            const jsonPart = rawContent.split(marker)[1];
-            parsedData = JSON.parse(jsonPart);
-          } catch (err) {
-            console.log("Tidak ada metadata ekor, mencoba scan QR code gambar...");
+      // Jika file berupa Gambar (PNG/JPG), gunakan pembacaan biner & Html5Qrcode scanFile yang kompatibel di HP
+      try {
+        const html5QrCode = new Html5Qrcode("hiddenQrRender");
+        const decodedText = await html5QrCode.scanFile(file, true);
+        html5QrCode.clear();
+        
+        const parsedData = JSON.parse(decodedText);
+        if (!terapkanDataImpor(parsedData)) {
+          alert("Data di dalam barcode tidak sesuai format.");
+        }
+      } catch (err) {
+        // Fallback: Cek apakah file memiliki metadata ekor tambahan
+        const reader = new FileReader();
+        reader.onload = async function(ev) {
+          const rawContent = ev.target.result;
+          const marker = "\n---UMKM_DATA_START---\n";
+          if (rawContent.includes(marker)) {
+            try {
+              const jsonPart = rawContent.split(marker)[1];
+              const parsedData = JSON.parse(jsonPart);
+              if (terapkanDataImpor(parsedData)) return;
+            } catch (e) {}
           }
-        }
-
-        if (parsedData && terapkanDataImpor(parsedData)) {
-          return;
-        }
-
-        try {
-          const html5QrCode = new Html5Qrcode("hiddenQrRender");
-          const decodedText = await html5QrCode.scanFile(file, true);
-          html5QrCode.clear();
-          parsedData = JSON.parse(decodedText);
-          
-          if (!terapkanDataImpor(parsedData)) {
-            alert("Data di dalam barcode tidak sesuai format.");
-          }
-        } catch (err) {
-          alert("Format file tidak dikenali. Pastikan mengunggah file Barcode PNG/JPG resmi yang diunduh dari Admin.");
-        }
-      };
-      reader.readAsText(file);
+          alert("Gagal memindai barcode dari file gambar ini. Pastikan Anda mengunggah file gambar Barcode resmi dari Admin.");
+        };
+        reader.readAsText(file);
+      }
     });
   }
 
@@ -626,10 +617,6 @@ function inisisasiAplikasiUtama() {
     const labelKategori = katObj ? katObj.nama : "Lainnya";
     
     let gambarSrc = urlInput && urlInput.value.trim() !== "" ? formatDirectImageUrl(urlInput.value.trim()) : `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
-
-    // Catatan Penting untuk ImgBB: 
-    // Pastikan saat mengunggah di ImgBB, Anda menyalin link bertuliskan "Direct link" (Tautan langsung) atau "BBCode / HTML image", 
-    // bukan tautan penampil halaman web (seperti https://ibb.co/...) agar gambar langsung muncul di aplikasi client.
 
     if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
       menuCustom[editMenuIndex] = {
