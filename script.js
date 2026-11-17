@@ -1,8 +1,8 @@
 const ADMIN_PASS_VALID = "Kernaden";
 
 let storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {
-  name: "Kedai Nusantara",
-  logo: "KN",
+  name: "Caffe Santai HAHAHA",
+  logo: "CS",
   qrisImg: ""
 };
 
@@ -220,6 +220,28 @@ function inisisasiAplikasiUtama() {
     document.getElementById("settingsModal").classList.remove("active");
   });
 
+  // FUNGSI TAB NAVIGASI MODAL ADMIN (AGAR BISA DIKLIK)
+  const tabButtons = document.querySelectorAll(".admin-tab-btn");
+  const tabContents = {
+    store: document.getElementById("tabContentStore"),
+    menu: document.getElementById("tabContentMenu"),
+    barcode: document.getElementById("tabContentBarcode")
+  };
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      tabButtons.forEach(b => b.classList.remove("active"));
+      Object.values(tabContents).forEach(tc => {
+        if (tc) tc.style.display = "none";
+      });
+      btn.classList.add("active");
+      const targetTab = btn.getAttribute("data-tab");
+      if (tabContents[targetTab]) {
+        tabContents[targetTab].style.display = "block";
+      }
+    });
+  });
+
   document.getElementById("btnSaveStoreSettings").addEventListener("click", () => {
     const name = document.getElementById("settingStoreName").value.trim();
     const logo = document.getElementById("settingStoreLogo").value.trim();
@@ -249,12 +271,13 @@ function inisisasiAplikasiUtama() {
     tampilkanToast("✓ Gambar QRIS berhasil disimpan!");
   });
 
+  let tempUploadedImage = null;
   document.getElementById("addMenuImageFile").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = function(evt) {
-        window.tempUploadedImage = evt.target.result;
+        tempUploadedImage = evt.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -269,14 +292,14 @@ function inisisasiAplikasiUtama() {
 
     const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
     const labelKategori = katObj ? katObj.nama : "Lainnya";
-    const gambarSrc = window.tempUploadedImage || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
+    const gambarSrc = tempUploadedImage || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
 
     if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
       menuCustom[editMenuIndex] = {
         ...menuCustom[editMenuIndex],
         nama: name, kategori, labelKategori, harga,
         deskripsi: desc || "Menu pilihan kedai.",
-        gambar: window.tempUploadedImage || menuCustom[editMenuIndex].gambar
+        gambar: tempUploadedImage || menuCustom[editMenuIndex].gambar
       };
       tampilkanToast("✓ Menu diperbarui!");
       editMenuIndex = null;
@@ -290,7 +313,7 @@ function inisisasiAplikasiUtama() {
       tampilkanToast("✓ Menu ditambahkan!");
     }
 
-    window.tempUploadedImage = null;
+    tempUploadedImage = null;
     document.getElementById("addMenuName").value = "";
     document.getElementById("addMenuPrice").value = "";
     document.getElementById("addMenuDesc").value = "";
