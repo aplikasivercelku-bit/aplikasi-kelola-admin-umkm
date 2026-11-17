@@ -2,7 +2,8 @@ const ADMIN_PASS_VALID = "Kernaden";
 
 let storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {
   name: "Kedai Nusantara",
-  logo: "KN"
+  logo: "KN",
+  qrisImg: ""
 };
 
 let menuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom")) || [];
@@ -25,31 +26,13 @@ const DAFTAR_KATEGORI = [
 
 function applyStoreIdentity() {
   const isAdminLogged = localStorage.getItem("umkm_admin_logged") === "true";
-
   if (!isAdminLogged || !storeIdentity.name) {
     document.title = "Panel Admin";
-    document.querySelectorAll("#loginLogoText").forEach(el => {
-      el.textContent = "ADM";
-      el.style.background = "var(--bg-elevated)";
-      el.style.color = "var(--text-muted)";
-    });
-    document.querySelectorAll("#loginTitleText").forEach(el => el.textContent = "Panel Admin");
     return;
   }
-
   document.title = `Admin - ${storeIdentity.name}`;
   document.querySelectorAll("#navBrandTitle").forEach(el => el.textContent = storeIdentity.name);
-  document.querySelectorAll("#navBrandLogo").forEach(el => {
-    el.textContent = storeIdentity.logo;
-    el.style.background = "";
-    el.style.color = "";
-  });
-  document.querySelectorAll("#loginLogoText").forEach(el => {
-    el.textContent = storeIdentity.logo;
-    el.style.background = "";
-    el.style.color = "";
-  });
-  document.querySelectorAll("#loginTitleText").forEach(el => el.textContent = `Admin - ${storeIdentity.name}`);
+  document.querySelectorAll("#navBrandLogo").forEach(el => el.textContent = storeIdentity.logo);
 }
 
 function formatRupiah(angka) {
@@ -75,12 +58,10 @@ function renderMenu() {
   if (!container) return;
 
   let menuTersaring = [...DATA_MENU];
-
   if (kataKunciCari !== "") {
     const keyword = kataKunciCari.toLowerCase();
     menuTersaring = menuTersaring.filter((item) =>
-      item.nama.toLowerCase().includes(keyword) ||
-      item.deskripsi.toLowerCase().includes(keyword)
+      item.nama.toLowerCase().includes(keyword) || item.deskripsi.toLowerCase().includes(keyword)
     );
   }
 
@@ -103,9 +84,7 @@ function renderMenu() {
       <div class="card-content">
         <h4>${item.nama}</h4>
         <p class="card-desc">${item.deskripsi}</p>
-        <div class="card-footer">
-          <span class="price-text">${formatRupiah(item.harga)}</span>
-        </div>
+        <div class="card-footer"><span class="price-text">${formatRupiah(item.harga)}</span></div>
       </div>
     `;
     container.appendChild(card);
@@ -119,28 +98,18 @@ function renderAdminCustomMenuList() {
   let filteredList = menuCustom;
   if (kataKunciCariAdminModal !== "") {
     const kw = kataKunciCariAdminModal.toLowerCase();
-    filteredList = menuCustom.filter(item => 
-      item.nama.toLowerCase().includes(kw) || 
-      item.labelKategori.toLowerCase().includes(kw) ||
-      item.deskripsi.toLowerCase().includes(kw)
-    );
+    filteredList = menuCustom.filter(item => item.nama.toLowerCase().includes(kw));
   }
 
-  let htmlContent = `
-    <div style="margin-bottom: 12px;">
-      <input type="text" id="searchAdminModalInput" placeholder="🔍 Cari menu di daftar kustom..." value="${kataKunciCariAdminModal}" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; outline: none;">
-    </div>
-  `;
+  let htmlContent = `<div style="margin-bottom: 12px;"><input type="text" id="searchAdminModalInput" placeholder="🔍 Cari menu..." value="${kataKunciCariAdminModal}" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; outline: none;"></div>`;
 
   if (menuCustom.length === 0) {
-    htmlContent += `<small style="color:var(--text-muted); display:block; text-align:center; padding: 10px;">Belum ada menu tambahan kustom.</small>`;
+    htmlContent += `<small style="color:var(--text-muted); display:block; text-align:center; padding: 10px;">Belum ada menu kustom.</small>`;
     container.innerHTML = htmlContent;
-    setupAdminSearchListener();
     return;
   }
 
   let itemsHtml = '<div style="display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px;">';
-  
   filteredList.forEach((item) => {
     const realIndex = menuCustom.findIndex(m => m.id === item.id);
     itemsHtml += `
@@ -160,22 +129,15 @@ function renderAdminCustomMenuList() {
     `;
   });
   itemsHtml += '</div>';
-
   container.innerHTML = htmlContent + itemsHtml;
-  setupAdminSearchListener();
-}
 
-function setupAdminSearchListener() {
   const searchInput = document.getElementById("searchAdminModalInput");
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
       kataKunciCariAdminModal = e.target.value.trim();
       renderAdminCustomMenuList();
       const updatedInput = document.getElementById("searchAdminModalInput");
-      if (updatedInput) {
-        updatedInput.focus();
-        updatedInput.setSelectionRange(updatedInput.value.length, updatedInput.value.length);
-      }
+      if (updatedInput) { updatedInput.focus(); updatedInput.setSelectionRange(updatedInput.value.length, updatedInput.value.length); }
     });
   }
 }
@@ -184,229 +146,118 @@ function mulaiEditMenuCustom(index) {
   const item = menuCustom[index];
   if (!item) return;
   editMenuIndex = index;
-
   document.getElementById("addMenuName").value = item.nama;
   document.getElementById("addMenuCategory").value = item.kategori;
   document.getElementById("addMenuPrice").value = item.harga;
   document.getElementById("addMenuDesc").value = item.deskripsi;
-
-  const formHeader = document.getElementById("formMenuHeaderTitle");
-  if (formHeader) formHeader.textContent = `✏️ Edit Menu: ${item.nama}`;
-  document.getElementById("btnSaveNewMenu").textContent = "💾 Simpan Perubahan Menu";
-
-  let btnCancel = document.getElementById("btnCancelEditMenu");
-  if (!btnCancel) {
-    btnCancel = document.createElement("button");
-    btnCancel.id = "btnCancelEditMenu";
-    btnCancel.type = "button";
-    btnCancel.textContent = "Batal Edit";
-    btnCancel.style.cssText = "width: 100%; margin-top: 8px; padding: 11px; border-radius: 12px; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 700; cursor: pointer;";
-    btnCancel.addEventListener("click", batalEditMenu);
-    document.getElementById("btnSaveNewMenu").parentNode.appendChild(btnCancel);
-  }
-  btnCancel.style.display = "block";
+  document.getElementById("formMenuHeaderTitle").textContent = `✏️ Edit Menu: ${item.nama}`;
+  document.getElementById("btnSaveNewMenu").textContent = "💾 Simpan Perubahan";
   tampilkanToast(`Mode Edit: ${item.nama}`);
-}
-
-function batalEditMenu() {
-  editMenuIndex = null;
-  document.getElementById("addMenuName").value = "";
-  document.getElementById("addMenuPrice").value = "";
-  document.getElementById("addMenuDesc").value = "";
-  const btnSave = document.getElementById("btnSaveNewMenu");
-  if (btnSave) btnSave.textContent = "Simpan & Perbarui Data";
-  const btnCancel = document.getElementById("btnCancelEditMenu");
-  if (btnCancel) btnCancel.style.display = "none";
 }
 
 function hapusMenuCustom(index) {
   if (confirm("Yakin ingin menghapus menu ini?")) {
-    if (editMenuIndex === index) batalEditMenu();
     menuCustom.splice(index, 1);
     DATA_MENU = [...menuCustom];
     simpanStateLocal();
     renderMenu();
     renderAdminCustomMenuList();
-    tampilkanToast("✓ Menu berhasil dihapus!");
+    tampilkanToast("✓ Menu dihapus!");
   }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   applyStoreIdentity();
-
   const loginScreen = document.getElementById("loginScreen");
   const mainAppContent = document.getElementById("mainAppContent");
-  const isAdminLogged = localStorage.getItem("umkm_admin_logged");
-
-  if (isAdminLogged === "true") {
+  if (localStorage.getItem("umkm_admin_logged") === "true") {
     loginScreen.style.display = "none";
     mainAppContent.style.display = "block";
     inisisasiAplikasiUtama();
-  } else {
-    loginScreen.style.display = "flex";
-    mainAppContent.style.display = "none";
   }
 
-  const btnTogglePass = document.getElementById("btnTogglePassword");
-  const inputPass = document.getElementById("inputAdminPassword");
-  if (btnTogglePass && inputPass) {
-    btnTogglePass.addEventListener("click", () => {
-      inputPass.type = inputPass.type === "password" ? "text" : "password";
-      btnTogglePass.textContent = inputPass.type === "password" ? "Lihat" : "Tutup";
-    });
-  }
+  document.getElementById("btnTogglePassword").addEventListener("click", () => {
+    const inputPass = document.getElementById("inputAdminPassword");
+    inputPass.type = inputPass.type === "password" ? "text" : "password";
+  });
 
   document.getElementById("btnLoginAdmin").addEventListener("click", () => {
-    if (inputPass.value.trim() === ADMIN_PASS_VALID) {
-      if (!storeIdentity.name) {
-        storeIdentity.name = "Kedai Nusantara";
-        storeIdentity.logo = "KN";
-        simpanStateLocal();
-      }
+    if (document.getElementById("inputAdminPassword").value.trim() === ADMIN_PASS_VALID) {
       localStorage.setItem("umkm_admin_logged", "true");
       loginScreen.style.display = "none";
       mainAppContent.style.display = "block";
       inisisasiAplikasiUtama();
-      renderAdminCustomMenuList();
       document.getElementById("settingsModal").classList.add("active");
-      tampilkanToast("✓ Login Admin Berhasil!");
     } else {
-      alert("Sandi Admin salah! Gunakan: Kernaden");
+      alert("Sandi Salah! Gunakan: Kernaden");
     }
   });
 
   document.getElementById("btnLogoutApp").addEventListener("click", () => {
-    if (confirm("Yakin ingin keluar dari sesi admin?")) {
-      localStorage.removeItem("umkm_admin_logged");
-      location.reload();
-    }
+    localStorage.removeItem("umkm_admin_logged");
+    location.reload();
   });
 });
 
 function inisisasiAplikasiUtama() {
-  applyStoreIdentity();
   document.getElementById("settingStoreName").value = storeIdentity.name;
   document.getElementById("settingStoreLogo").value = storeIdentity.logo;
+
+  const previewQris = document.getElementById("previewQrisAdmin");
+  if (storeIdentity.qrisImg) {
+    previewQris.src = storeIdentity.qrisImg;
+    previewQris.style.display = "inline-block";
+  }
 
   DATA_MENU = [...menuCustom];
   renderMenu();
 
-  const searchInput = document.getElementById("searchMenuInput");
-  const btnClearSearch = document.getElementById("btnClearSearch");
-
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      kataKunciCari = e.target.value.trim();
-      btnClearSearch.style.display = kataKunciCari !== "" ? "flex" : "none";
-      renderMenu();
-    });
-  }
-
-  if (btnClearSearch) {
-    btnClearSearch.addEventListener("click", () => {
-      kataKunciCari = "";
-      searchInput.value = "";
-      btnClearSearch.style.display = "none";
-      renderMenu();
-    });
-  }
-
-  const tabButtons = document.querySelectorAll(".admin-tab-btn");
-  const tabContents = {
-    store: document.getElementById("tabContentStore"),
-    menu: document.getElementById("tabContentMenu"),
-    barcode: document.getElementById("tabContentBarcode")
-  };
-
-  tabButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      tabButtons.forEach(b => b.classList.remove("active"));
-      Object.values(tabContents).forEach(tc => tc.style.display = "none");
-      btn.classList.add("active");
-      const targetTab = btn.getAttribute("data-tab");
-      if (tabContents[targetTab]) tabContents[targetTab].style.display = "block";
-    });
-  });
-
-  const settingsModal = document.getElementById("settingsModal");
   document.getElementById("btnOpenSettings").addEventListener("click", () => {
-    kataKunciCariAdminModal = "";
     renderAdminCustomMenuList();
-    settingsModal.classList.add("active");
+    document.getElementById("settingsModal").classList.add("active");
   });
   document.getElementById("btnCloseSettingsModal").addEventListener("click", () => {
-    batalEditMenu();
-    settingsModal.classList.remove("active");
+    document.getElementById("settingsModal").classList.remove("active");
   });
 
   document.getElementById("btnSaveStoreSettings").addEventListener("click", () => {
     const name = document.getElementById("settingStoreName").value.trim();
     const logo = document.getElementById("settingStoreLogo").value.trim();
-    if (!name) { alert("Nama toko tidak boleh kosong!"); return; }
-
-    storeIdentity = { name, logo: logo || name.substring(0, 2).toUpperCase() };
+    if (!name) return alert("Nama toko wajib diisi!");
+    storeIdentity.name = name;
+    storeIdentity.logo = logo || name.substring(0, 2).toUpperCase();
     simpanStateLocal();
     applyStoreIdentity();
-    tampilkanToast("✓ Identitas toko diperbarui!");
+    tampilkanToast("✓ Toko diperbarui!");
   });
 
-  // QR CODE LANGSUNG KE URL CLIENT VERCEL ANDA
-  document.getElementById("btnDownloadBarcodeQr").addEventListener("click", () => {
-    if (typeof QRCode === "undefined") {
-      alert("Library QRCode belum termuat.");
-      return;
-    }
-
-    // Link URL Vercel Client yang dituju saat barcode discan
-    const clientUrl = "https://aplikasi-umkm-five.vercel.app/";
-
-    const hiddenContainer = document.getElementById("hiddenQrRender");
-    hiddenContainer.innerHTML = "";
-
-    new QRCode(hiddenContainer, {
-      text: clientUrl,
-      width: 280,
-      height: 280,
-      colorDark: "#000000",
-      colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.H
-    });
-
-    setTimeout(() => {
-      const qrCanvas = hiddenContainer.querySelector("canvas");
-      const qrImg = hiddenContainer.querySelector("img");
-
-      const unduhCanvas = (drawable) => {
-        const padding = 32;
-        const finalCanvas = document.createElement("canvas");
-        finalCanvas.width = 280 + padding * 2;
-        finalCanvas.height = 280 + padding * 2;
-        const ctx = finalCanvas.getContext("2d");
-
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-        ctx.drawImage(drawable, padding, padding, 280, 280);
-
-        finalCanvas.toBlob((blob) => {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          const safeStoreName = storeIdentity.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
-          link.download = `barcode_menu_${safeStoreName}.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          tampilkanToast("✓ Barcode Link URL Client Berhasil Diunduh!");
-        }, "image/png");
+  document.getElementById("settingQrisImgFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(uploadEvent) {
+        storeIdentity.qrisImg = uploadEvent.target.result;
+        previewQris.src = storeIdentity.qrisImg;
+        previewQris.style.display = "inline-block";
       };
+      reader.readAsDataURL(file);
+    }
+  });
 
-      if (qrCanvas) unduhCanvas(qrCanvas);
-      else if (qrImg) {
-        if (qrImg.complete) unduhCanvas(qrImg);
-        else qrImg.onload = () => unduhCanvas(qrImg);
-      }
-    }, 250);
+  document.getElementById("btnSaveQrisSettings").addEventListener("click", () => {
+    simpanStateLocal();
+    tampilkanToast("✓ Gambar QRIS berhasil disimpan!");
+  });
+
+  document.getElementById("addMenuImageFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        window.tempUploadedImage = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
   });
 
   document.getElementById("btnSaveNewMenu").addEventListener("click", () => {
@@ -414,43 +265,68 @@ function inisisasiAplikasiUtama() {
     const kategori = document.getElementById("addMenuCategory").value;
     const harga = parseInt(document.getElementById("addMenuPrice").value);
     const desc = document.getElementById("addMenuDesc").value.trim();
-
-    if (!name || isNaN(harga)) {
-      alert("Mohon lengkapi Nama Menu dan Harga!");
-      return;
-    }
+    if (!name || isNaN(harga)) return alert("Lengkapi Nama dan Harga Menu!");
 
     const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
     const labelKategori = katObj ? katObj.nama : "Lainnya";
-    const gambarSrc = `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
+    const gambarSrc = window.tempUploadedImage || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
 
     if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
       menuCustom[editMenuIndex] = {
         ...menuCustom[editMenuIndex],
-        nama: name,
-        kategori,
-        labelKategori,
-        harga,
-        deskripsi: desc || "Menu pilihan kedai."
+        nama: name, kategori, labelKategori, harga,
+        deskripsi: desc || "Menu pilihan kedai.",
+        gambar: window.tempUploadedImage || menuCustom[editMenuIndex].gambar
       };
-      tampilkanToast("✓ Perubahan menu disimpan!");
+      tampilkanToast("✓ Menu diperbarui!");
+      editMenuIndex = null;
     } else {
       menuCustom.push({
         id: Date.now(),
-        nama: name,
-        kategori,
-        labelKategori,
-        harga,
+        nama: name, kategori, labelKategori, harga,
         deskripsi: desc || "Menu pilihan kedai.",
         gambar: gambarSrc
       });
-      tampilkanToast("✓ Menu baru ditambahkan!");
+      tampilkanToast("✓ Menu ditambahkan!");
     }
+
+    window.tempUploadedImage = null;
+    document.getElementById("addMenuName").value = "";
+    document.getElementById("addMenuPrice").value = "";
+    document.getElementById("addMenuDesc").value = "";
+    document.getElementById("formMenuHeaderTitle").textContent = "Tambah Menu Baru & Unggah Foto";
+    document.getElementById("btnSaveNewMenu").textContent = "Simpan & Perbarui Data";
 
     DATA_MENU = [...menuCustom];
     simpanStateLocal();
     renderMenu();
     renderAdminCustomMenuList();
-    batalEditMenu();
+  });
+
+  document.getElementById("btnDownloadBarcodeQr").addEventListener("click", () => {
+    if (typeof QRCode === "undefined") return alert("Library QRCode belum termuat.");
+    const clientUrl = "https://aplikasi-umkm-five.vercel.app/";
+    const hiddenContainer = document.getElementById("hiddenQrRender");
+    hiddenContainer.innerHTML = "";
+    new QRCode(hiddenContainer, { text: clientUrl, width: 280, height: 280, colorDark: "#000000", colorLight: "#ffffff" });
+
+    setTimeout(() => {
+      const qrCanvas = hiddenContainer.querySelector("canvas");
+      if (qrCanvas) {
+        const finalCanvas = document.createElement("canvas");
+        finalCanvas.width = 344; finalCanvas.height = 344;
+        const ctx = finalCanvas.getContext("2d");
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 344, 344);
+        ctx.drawImage(qrCanvas, 32, 32, 280, 280);
+        finalCanvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `barcode_menu_${storeIdentity.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`;
+          link.click();
+          tampilkanToast("✓ Barcode Berhasil Diunduh!");
+        }, "image/png");
+      }
+    }, 250);
   });
 }
