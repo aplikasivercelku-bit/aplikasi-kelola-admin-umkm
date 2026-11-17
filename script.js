@@ -331,15 +331,14 @@ function inisisasiAplikasiUtama() {
     }
   }
 
-  // Tambahkan section Import Barcode / JSON di tab Barcode jika belum ada
   const tabBarcodeBox = document.getElementById("tabContentBarcode");
   if (tabBarcodeBox && !document.getElementById("importAdminJsonInput")) {
     const importDiv = document.createElement("div");
     importDiv.style.cssText = "margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);";
     importDiv.innerHTML = `
       <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: var(--text-main);">📥 Import Data Barcode / JSON</h4>
-      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Unggah file gambar Barcode (.png) atau JSON dari admin sebelumnya untuk memulihkan data toko dan menu.</p>
-      <input type="file" id="importAdminJsonInput" accept=".png,.json" style="width: 100%; margin-bottom: 10px; font-size: 0.85rem; color: var(--text-main);">
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Unggah file gambar Barcode (.png/.jpg) atau file JSON untuk memulihkan data toko dan menu.</p>
+      <input type="file" id="importAdminJsonInput" accept=".png,.jpg,.jpeg,.json" style="width: 100%; margin-bottom: 10px; font-size: 0.85rem; color: var(--text-main);">
       <button id="btnProcessImportAdmin" type="button" style="width: 100%; padding: 11px; border-radius: 12px; background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-main); font-weight: 700; cursor: pointer;">Proses Import Data</button>
     `;
     tabBarcodeBox.appendChild(importDiv);
@@ -347,13 +346,73 @@ function inisisasiAplikasiUtama() {
     document.getElementById("btnProcessImportAdmin").addEventListener("click", async () => {
       const fileInput = document.getElementById("importAdminJsonInput");
       if (fileInput.files.length === 0) {
-        alert("Pilih file gambar Barcode (.png) atau JSON terlebih dahulu!");
+        alert("Pilih file gambar Barcode (.png/.jpg) atau JSON terlebih dahulu!");
         return;
       }
 
       const file = fileInput.files[0];
-      const reader = new FileReader();
+      tampilkanToast("Memproses file import...");
 
+      // Fungsi bantuan untuk memproses objek data yang sukses dibaca
+      const terapkanDataImpor = (parsedData) => {
+        let listMenuParsed = [];
+        if (parsedData && typeof parsedData === "object" && !Array.isArray(parsedData)) {
+          if (parsedData.store) {
+            storeIdentity = {
+              name: parsedData.store.name || storeIdentity.name,
+              logo: parsedData.store.logo || storeIdentity.logo
+            };
+            document.getElementById("settingStoreName").value = storeIdentity.name;
+            document.getElementById("settingStoreLogo").value = storeIdentity.logo;
+          }
+          if (Array.isArray(parsedData.menus)) {
+            listMenuParsed = parsedData.menus;
+          }
+        } else if (Array.isArray(parsedData)) {
+          listMenuParsed = parsedData;
+        }
+
+        if (listMenuParsed.length > 0) {
+          menuCustom = listMenuParsed.map(m => ({
+            id: m.id || Date.now() + Math.random(),
+            nama: m.n || m.nama || "Menu",
+            kategori: m.k || m.kategori || "kopi",
+            labelKategori: m.lk || m.labelKategori || "Menu",
+            harga: m.h || m.harga || 0,
+            deskripsi: m.d || m.deskripsi || "",
+            gambar: m.g || m.gambar || m.img || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(m.n || m.nama || "Menu")}`
+          }));
+
+          DATA_MENU = [...menuCustom];
+          simpanStateLocal();
+          applyStoreIdentity();
+          renderMenu();
+          renderAdminCustomMenuList();
+          tampilkanToast("✓ Berhasil Import Data Toko & Menu!");
+          return true;
+        }
+        return false;
+      };
+
+      // Cek apakah file berupa JSON
+      if (file.name.endsWith(".json") || file.type === "application/json") {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            if (!terapkanDataImpor(parsed)) {
+              alert("Format data JSON tidak valid atau kosong.");
+            }
+          } catch (err) {
+            alert("Gagal membaca file JSON.");
+          }
+        };
+        reader.readAsText(file);
+        return;
+      }
+
+      // Jika file berupa gambar (PNG/JPG), coba baca metadata ekor file atau scan QR Code
+      const reader = new FileReader();
       reader.onload = async function(ev) {
         const rawContent = ev.target.result;
         const marker = "\n---UMKM_DATA_START---\n";
@@ -364,60 +423,26 @@ function inisisasiAplikasiUtama() {
             const jsonPart = rawContent.split(marker)[1];
             parsedData = JSON.parse(jsonPart);
           } catch (err) {
-            console.error("Gagal parse metadata PNG:", err);
+            console.log("Tidak ada metadata ekor, mencoba scan QR code gambar...");
           }
         }
 
-        if (!parsedData && (file.name.endsWith(".json") || file.type === "application/json")) {
-          try {
-            parsedData = JSON.parse(rawContent);
-          } catch (err) {
-            alert("Gagal membaca file JSON.");
-            return;
-          }
+        if (parsedData && terapkanDataImpor(parsedData)) {
+          return;
         }
 
-        if (!parsedData && file.type === "image/png") {
-          try {
-            const html5QrCode = new Html5Qrcode("hiddenQrRender");
-            const decodedText = await html5QrCode.scanFile(file, true);
-            html5QrCode.clear();
-            parsedData = JSON.parse(decodedText);
-          } catch (err) {
-            alert("Gagal membaca barcode dari gambar tersebut.");
-            return;
+        // Jika tidak ada metadata ekor, gunakan Html5Qrcode untuk scan gambar barcode
+        try {
+          const html5QrCode = new Html5Qrcode("hiddenQrRender");
+          const decodedText = await html5QrCode.scanFile(file, true);
+          html5QrCode.clear();
+          parsedData = JSON.parse(decodedText);
+          
+          if (!terapkanDataImpor(parsedData)) {
+            alert("Data di dalam barcode tidak sesuai format.");
           }
-        }
-
-        if (parsedData) {
-          if (parsedData.store) {
-            storeIdentity = {
-              name: parsedData.store.name || storeIdentity.name,
-              logo: parsedData.store.logo || storeIdentity.logo
-            };
-            document.getElementById("settingStoreName").value = storeIdentity.name;
-            document.getElementById("settingStoreLogo").value = storeIdentity.logo;
-          }
-          if (Array.isArray(parsedData.menus)) {
-            menuCustom = parsedData.menus.map(m => ({
-              id: m.id || Date.now() + Math.random(),
-              nama: m.n || m.nama || "Menu",
-              kategori: m.k || m.kategori || "kopi",
-              labelKategori: m.lk || m.labelKategori || "Menu",
-              harga: m.h || m.harga || 0,
-              deskripsi: m.d || m.deskripsi || "",
-              gambar: m.g || m.gambar || m.img || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(m.n || m.nama || "Menu")}`
-            }));
-          }
-
-          DATA_MENU = [...menuCustom];
-          simpanStateLocal();
-          applyStoreIdentity();
-          renderMenu();
-          renderAdminCustomMenuList();
-          tampilkanToast("✓ Berhasil Import Data Toko & Menu!");
-        } else {
-          alert("Format file tidak dikenali.");
+        } catch (err) {
+          alert("Format file tidak dikenali. Pastikan mengunggah file Barcode PNG/JPG resmi yang diunduh dari Admin.");
         }
       };
       reader.readAsText(file);
