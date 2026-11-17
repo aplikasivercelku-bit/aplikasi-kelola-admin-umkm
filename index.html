@@ -58,7 +58,7 @@
       </div>
 
       <div class="menu-grid" id="menuContainer">
-        <!-- Daftar menu kustom akan dirender otomatis di sini -->
+        <!-- Menu kustom dirender di sini -->
       </div>
     </main>
   </div>
@@ -83,19 +83,19 @@
         <div id="tabContentStore" class="admin-tab-content">
           <div class="form-group">
             <label>Nama Toko</label>
-            <input type="text" id="settingStoreName" placeholder="Contoh: Kedai Nusantara">
+            <input type="text" id="settingStoreName" placeholder="Contoh: Caffe Santai HAHAHA">
           </div>
           <div class="form-group">
             <label>Singkatan Logo (2-3 Huruf)</label>
-            <input type="text" id="settingStoreLogo" placeholder="Contoh: KN">
+            <input type="text" id="settingStoreLogo" placeholder="Contoh: CS">
           </div>
           <button type="button" id="btnSaveStoreSettings" class="btn-primary btn-full" style="margin-bottom: 20px;">Simpan Identitas Toko</button>
 
           <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
           <div class="form-group">
-            <label>Pengaturan Gambar QRIS Pembayaran</label>
-            <input type="file" id="settingQrisImgFile" accept="image/*" style="padding: 8px;">
+            <label>Link Gambar QRIS Pembayaran (dari sigmawire.net)</label>
+            <input type="text" id="settingQrisImgUrl" placeholder="https://sigmawire.net/...">
           </div>
           <div style="text-align: center; margin: 12px 0;">
             <img id="previewQrisAdmin" src="" alt="Preview QRIS" style="max-width: 160px; max-height: 160px; display: none; border-radius: 8px; border: 1px solid var(--border-color);">
@@ -103,13 +103,13 @@
           <button type="button" id="btnSaveQrisSettings" class="btn-primary btn-full">Simpan Gambar QRIS</button>
         </div>
 
-        <!-- TAB 2: KELOLA MENU (TAMBAH & LIST) -->
+        <!-- TAB 2: KELOLA MENU -->
         <div id="tabContentMenu" class="admin-tab-content" style="display: none;">
           <div style="background: var(--bg-elevated); padding: 16px; border-radius: 14px; border: 1px solid var(--border-color); margin-bottom: 20px;">
-            <h4 id="formMenuHeaderTitle" style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: var(--accent);">Tambah Menu Baru & Unggah Foto</h4>
+            <h4 id="formMenuHeaderTitle" style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: var(--accent);">Tambah Menu Baru & Link Foto</h4>
             <div class="form-group">
               <label>Nama Menu</label>
-              <input type="text" id="addMenuName" placeholder="Contoh: Nasi Goreng Spesial">
+              <input type="text" id="addMenuName" placeholder="Contoh: Nasi Goreng">
             </div>
             <div class="form-group">
               <label>Kategori</label>
@@ -126,11 +126,11 @@
             </div>
             <div class="form-group">
               <label>Harga (angka saja)</label>
-              <input type="number" id="addMenuPrice" placeholder="15000">
+              <input type="number" id="addMenuPrice" placeholder="20000">
             </div>
             <div class="form-group">
-              <label>Foto Menu (Unggah dari Perangkat)</label>
-              <input type="file" id="addMenuImageFile" accept="image/*" style="padding: 8px;">
+              <label>Link Foto Menu (https://sigmawire.net/image-to-url-converter)</label>
+              <input type="text" id="addMenuImgUrl" placeholder="Tempel URL gambar di sini...">
             </div>
             <div class="form-group">
               <label>Deskripsi</label>
@@ -148,7 +148,7 @@
         <!-- TAB 3: UNDUH BARCODE -->
         <div id="tabContentBarcode" class="admin-tab-content" style="display: none; text-align: center; padding: 20px 0;">
           <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">Barcode Akses Menu Client</h4>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Unduh QR Code ini agar pelanggan dapat memindai dan langsung membuka halaman menu pemesanan di HP mereka.</p>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Unduh QR Code ini (mengarah ke URL client Anda) agar pelanggan dapat memindai menu.</p>
           <div id="hiddenQrRender" style="display: none;"></div>
           <button type="button" id="btnDownloadBarcodeQr" class="btn-primary" style="padding: 12px 24px;">📥 Unduh Gambar Barcode (.png)</button>
         </div>
@@ -159,7 +159,6 @@
 
   <div id="toastNotif" class="toast">Notifikasi</div>
 
-  <!-- Library QRCode Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="script.js"></script>
 </body>
