@@ -11,7 +11,6 @@ let DATA_MENU = [...menuCustom];
 let kataKunciCari = "";
 let kataKunciCariAdminModal = "";
 let editMenuIndex = null;
-let tempUploadedImage = "";
 
 const DAFTAR_KATEGORI = [
   { id: "semua", nama: "Semua Menu" },
@@ -58,7 +57,7 @@ function renderMenu() {
   const counterEl = document.getElementById("menuCounter");
   if (!container) return;
 
-  let menuTersaring = [...DATA_MENU];
+  let menuTersaring = [...menuCustom];
   if (kataKunciCari !== "") {
     const keyword = kataKunciCari.toLowerCase();
     menuTersaring = menuTersaring.filter((item) =>
@@ -66,11 +65,11 @@ function renderMenu() {
     );
   }
 
-  counterEl.textContent = `${menuTersaring.length} Menu`;
+  if (counterEl) counterEl.textContent = `${menuTersaring.length} Menu`;
   container.innerHTML = "";
 
   if (menuTersaring.length === 0) {
-    container.innerHTML = `<div class="empty-search-state" style="text-align:center; padding:30px; color:var(--text-muted);"><p>Belum ada menu kustom. Silakan tambah menu baru melalui tombol pengaturan (⚙️).</p></div>`;
+    container.innerHTML = `<div class="empty-search-state" style="text-align:center; padding:30px; color:var(--text-muted);"><p>Belum ada menu kustom.</p></div>`;
     return;
   }
 
@@ -110,7 +109,7 @@ function renderAdminCustomMenuList() {
     return;
   }
 
-  let itemsHtml = '<div style="display: flex; flexDirection: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px;">';
+  let itemsHtml = '<div style="display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px;">';
   filteredList.forEach((item) => {
     const realIndex = menuCustom.findIndex(m => m.id === item.id);
     itemsHtml += `
@@ -150,8 +149,8 @@ function mulaiEditMenuCustom(index) {
   document.getElementById("addMenuName").value = item.nama;
   document.getElementById("addMenuCategory").value = item.kategori;
   document.getElementById("addMenuPrice").value = item.harga;
+  document.getElementById("addMenuImgUrl").value = item.gambar;
   document.getElementById("addMenuDesc").value = item.deskripsi;
-  tempUploadedImage = item.gambar;
   document.getElementById("formMenuHeaderTitle").textContent = `✏️ Edit Menu: ${item.nama}`;
   document.getElementById("btnSaveNewMenu").textContent = "💾 Simpan Perubahan";
   tampilkanToast(`Mode Edit: ${item.nama}`);
@@ -160,7 +159,6 @@ function mulaiEditMenuCustom(index) {
 function hapusMenuCustom(index) {
   if (confirm("Yakin ingin menghapus menu ini?")) {
     menuCustom.splice(index, 1);
-    DATA_MENU = [...menuCustom];
     simpanStateLocal();
     renderMenu();
     renderAdminCustomMenuList();
@@ -209,9 +207,9 @@ function inisisasiAplikasiUtama() {
   if (storeIdentity.qrisImg) {
     previewQris.src = storeIdentity.qrisImg;
     previewQris.style.display = "inline-block";
+    document.getElementById("settingQrisImgUrl").value = storeIdentity.qrisImg;
   }
 
-  DATA_MENU = [...menuCustom];
   renderMenu();
 
   document.getElementById("btnOpenSettings").addEventListener("click", () => {
@@ -250,52 +248,38 @@ function inisisasiAplikasiUtama() {
     tampilkanToast("✓ Toko diperbarui!");
   });
 
-  document.getElementById("settingQrisImgFile").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(uploadEvent) {
-        storeIdentity.qrisImg = uploadEvent.target.result;
-        previewQris.src = storeIdentity.qrisImg;
-        previewQris.style.display = "inline-block";
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
   document.getElementById("btnSaveQrisSettings").addEventListener("click", () => {
-    simpanStateLocal();
-    tampilkanToast("✓ Gambar QRIS berhasil disimpan!");
-  });
-
-  document.getElementById("addMenuImageFile").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        tempUploadedImage = evt.target.result;
-      };
-      reader.readAsDataURL(file);
+    const qrisUrl = document.getElementById("settingQrisImgUrl").value.trim();
+    storeIdentity.qrisImg = qrisUrl;
+    if (qrisUrl) {
+      previewQris.src = qrisUrl;
+      previewQris.style.display = "inline-block";
+    } else {
+      previewQris.style.display = "none";
     }
+    simpanStateLocal();
+    tampilkanToast("✓ QRIS disimpan!");
   });
 
   document.getElementById("btnSaveNewMenu").addEventListener("click", () => {
     const name = document.getElementById("addMenuName").value.trim();
     const kategori = document.getElementById("addMenuCategory").value;
     const harga = parseInt(document.getElementById("addMenuPrice").value);
+    const imgUrl = document.getElementById("addMenuImgUrl").value.trim();
     const desc = document.getElementById("addMenuDesc").value.trim();
+
     if (!name || isNaN(harga)) return alert("Lengkapi Nama dan Harga Menu!");
 
     const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
     const labelKategori = katObj ? katObj.nama : "Lainnya";
-    const gambarSrc = tempUploadedImage || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
+    const gambarSrc = imgUrl || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
 
     if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
       menuCustom[editMenuIndex] = {
         ...menuCustom[editMenuIndex],
         nama: name, kategori, labelKategori, harga,
         deskripsi: desc || "Menu pilihan kedai.",
-        gambar: tempUploadedImage || menuCustom[editMenuIndex].gambar
+        gambar: gambarSrc
       };
       tampilkanToast("✓ Menu diperbarui!");
       editMenuIndex = null;
@@ -309,15 +293,13 @@ function inisisasiAplikasiUtama() {
       tampilkanToast("✓ Menu ditambahkan!");
     }
 
-    tempUploadedImage = "";
     document.getElementById("addMenuName").value = "";
     document.getElementById("addMenuPrice").value = "";
+    document.getElementById("addMenuImgUrl").value = "";
     document.getElementById("addMenuDesc").value = "";
-    document.getElementById("addMenuImageFile").value = "";
-    document.getElementById("formMenuHeaderTitle").textContent = "Tambah Menu Baru & Unggah Foto";
+    document.getElementById("formMenuHeaderTitle").textContent = "Tambah Menu Baru & Link Foto";
     document.getElementById("btnSaveNewMenu").textContent = "Simpan & Perbarui Data";
 
-    DATA_MENU = [...menuCustom];
     simpanStateLocal();
     renderMenu();
     renderAdminCustomMenuList();
