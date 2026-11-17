@@ -3,8 +3,7 @@ const ADMIN_PASS_VALID = "Kernaden";
 let storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {
   name: "Caffe Santai HAHAHA",
   logo: "CS",
-  qrisImg: "",
-  qrisText: "DANA/OVO/Transfer: 087877611218 a.n Olan"
+  qrisText: "OLAN MAULANA Bank Mandiri 1630011235432"
 };
 
 let menuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom")) || [];
@@ -205,13 +204,6 @@ function inisisasiAplikasiUtama() {
   document.getElementById("settingStoreLogo").value = storeIdentity.logo;
   document.getElementById("settingQrisText").value = storeIdentity.qrisText || "";
 
-  const previewQris = document.getElementById("previewQrisAdmin");
-  if (storeIdentity.qrisImg) {
-    previewQris.src = storeIdentity.qrisImg;
-    previewQris.style.display = "inline-block";
-    document.getElementById("settingQrisImgUrl").value = storeIdentity.qrisImg;
-  }
-
   renderMenu();
 
   document.getElementById("btnOpenSettings").addEventListener("click", () => {
@@ -251,19 +243,10 @@ function inisisasiAplikasiUtama() {
   });
 
   document.getElementById("btnSaveQrisSettings").addEventListener("click", () => {
-    const qrisUrl = document.getElementById("settingQrisImgUrl").value.trim();
     const qrisText = document.getElementById("settingQrisText").value.trim();
-    storeIdentity.qrisImg = qrisUrl;
     storeIdentity.qrisText = qrisText;
-
-    if (qrisUrl) {
-      previewQris.src = qrisUrl;
-      previewQris.style.display = "inline-block";
-    } else {
-      previewQris.style.display = "none";
-    }
     simpanStateLocal();
-    tampilkanToast("✓ Pengaturan QRIS disimpan!");
+    tampilkanToast("✓ Info pembayaran berhasil disimpan!");
   });
 
   document.getElementById("btnSaveNewMenu").addEventListener("click", () => {
