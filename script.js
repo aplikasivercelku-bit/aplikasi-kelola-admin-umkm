@@ -23,6 +23,15 @@ const DAFTAR_KATEGORI = [
   { id: "tambahan", nama: "Tambahan / Topping" }
 ];
 
+// Fungsi bantu untuk merapikan link gambar (terutama ImgBB agar jadi direct link jika diperlukan)
+function formatDirectImageUrl(url) {
+  if (!url) return "";
+  let cleanUrl = url.trim();
+  // Jika pengguna memasukkan link viewer ibb.co, ubah ke format penampil langsung jika memungkinkan, 
+  // atau biarkan jika sudah berupa direct link.
+  return cleanUrl;
+}
+
 function applyStoreIdentity() {
   const isAdminLogged = localStorage.getItem("umkm_admin_logged") === "true";
 
@@ -325,8 +334,8 @@ function inisisasiAplikasiUtama() {
     const oldFileInputContainer = document.getElementById("addMenuImageFile")?.parentElement;
     if (oldFileInputContainer) {
       oldFileInputContainer.innerHTML = `
-        <label style="font-size:0.82rem; color:var(--text-muted); display:block; margin-bottom:4px;">Link Gambar (URL)</label>
-        <input type="url" id="addMenuImageUrl" placeholder="https://cdn.corenexis.com/.../gambar.jpg" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; outline: none;">
+        <label style="font-size:0.82rem; color:var(--text-muted); display:block; margin-bottom:4px;">Link Gambar (URL / ImgBB)</label>
+        <input type="url" id="addMenuImageUrl" placeholder="https://i.ibb.co/... atau link gambar langsung" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; outline: none;">
       `;
     }
   }
@@ -353,7 +362,6 @@ function inisisasiAplikasiUtama() {
       const file = fileInput.files[0];
       tampilkanToast("Memproses file import...");
 
-      // Fungsi bantuan untuk memproses objek data yang sukses dibaca
       const terapkanDataImpor = (parsedData) => {
         let listMenuParsed = [];
         if (parsedData && typeof parsedData === "object" && !Array.isArray(parsedData)) {
@@ -394,7 +402,6 @@ function inisisasiAplikasiUtama() {
         return false;
       };
 
-      // Cek apakah file berupa JSON
       if (file.name.endsWith(".json") || file.type === "application/json") {
         const reader = new FileReader();
         reader.onload = function(ev) {
@@ -411,7 +418,6 @@ function inisisasiAplikasiUtama() {
         return;
       }
 
-      // Jika file berupa gambar (PNG/JPG), coba baca metadata ekor file atau scan QR Code
       const reader = new FileReader();
       reader.onload = async function(ev) {
         const rawContent = ev.target.result;
@@ -431,7 +437,6 @@ function inisisasiAplikasiUtama() {
           return;
         }
 
-        // Jika tidak ada metadata ekor, gunakan Html5Qrcode untuk scan gambar barcode
         try {
           const html5QrCode = new Html5Qrcode("hiddenQrRender");
           const decodedText = await html5QrCode.scanFile(file, true);
@@ -619,7 +624,12 @@ function inisisasiAplikasiUtama() {
 
     const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
     const labelKategori = katObj ? katObj.nama : "Lainnya";
-    const gambarSrc = urlInput && urlInput.value.trim() !== "" ? urlInput.value.trim() : `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
+    
+    let gambarSrc = urlInput && urlInput.value.trim() !== "" ? formatDirectImageUrl(urlInput.value.trim()) : `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
+
+    // Catatan Penting untuk ImgBB: 
+    // Pastikan saat mengunggah di ImgBB, Anda menyalin link bertuliskan "Direct link" (Tautan langsung) atau "BBCode / HTML image", 
+    // bukan tautan penampil halaman web (seperti https://ibb.co/...) agar gambar langsung muncul di aplikasi client.
 
     if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
       menuCustom[editMenuIndex] = {
