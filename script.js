@@ -59,14 +59,12 @@ function tampilkanToast(pesan) {
   setTimeout(() => { toast.classList.remove("show"); }, 2600);
 }
 
-// Dorong data toko & daftar menu terbaru ke Cloud Sync secara otomatis setiap ada perubahan di Admin
 async function pushDataToCloudSync() {
   const indicator = document.getElementById("syncStatusIndicator");
   if (indicator) {
     indicator.style.color = "#fbbf24";
     indicator.textContent = "⏳ Menyinkronkan menu ke Cloud...";
   }
-
   const payload = {
     updatedAt: Date.now(),
     storeId: storeIdentity.storeId,
@@ -86,7 +84,6 @@ async function pushDataToCloudSync() {
       g: item.gambar || ""
     }))
   };
-
   try {
     const res = await fetch(`${CLOUD_SYNC_ENDPOINT}/store_${encodeURIComponent(storeIdentity.storeId)}`, {
       method: "POST",
@@ -103,7 +100,6 @@ async function pushDataToCloudSync() {
   } catch (e) {
     console.warn("Cloud sync offline, menggunakan fallback URL:", e);
   }
-
   if (indicator) {
     indicator.style.color = "#4ade80";
     indicator.textContent = `☁️ Siap (${menuCustom.length} Menu tersimpan)`;
@@ -118,45 +114,16 @@ function simpanStateLocal() {
   pushDataToCloudSync();
 }
 
-// Bangun URL Barcode Permanen berbasis ID Akun/Toko (?store=...) + fallback snapshot awal (?data=...)
+// PERBAIKAN ADMIN 1: QR PERMANEN - Hanya ?store=, TANPA ?data=
 function buildSyncedClientUrl() {
   const latestStore = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
-  const latestMenus = JSON.parse(localStorage.getItem("umkm_menu_custom")) || menuCustom;
-
   const baseUrlInput = document.getElementById("settingClientUrl");
   let baseUrl = (baseUrlInput && baseUrlInput.value.trim()) ? baseUrlInput.value.trim() : (latestStore.clientUrl || "https://aplikasi-umkm-five.vercel.app/");
   if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
     baseUrl = "https://" + baseUrl;
   }
-
-  // Sertakan parameter ?store=ID_TOKO sebagai kunci utama sinkronisasi real-time (1 barcode selamanya)
-  // Plus ?data= sebagai cadangan instan jika jaringan sedang offline
-  const compactSnapshot = {
-    s: {
-      n: latestStore.name,
-      l: latestStore.logo,
-      w: latestStore.wa || "6287877611218",
-      q: latestStore.qrisText || ""
-    },
-    m: latestMenus.map(item => ({
-      n: item.nama,
-      k: item.kategori,
-      h: Number(item.harga),
-      d: item.deskripsi || "",
-      g: item.gambar || ""
-    }))
-  };
-
-  let encoded = "";
-  const jsonStr = JSON.stringify(compactSnapshot);
-  if (typeof LZString !== "undefined") {
-    encoded = LZString.compressToEncodedURIComponent(jsonStr);
-  } else {
-    encoded = btoa(unescape(encodeURIComponent(jsonStr)));
-  }
-
   const separator = baseUrl.includes("?") ? "&" : "?";
-  return `${baseUrl}${separator}store=${encodeURIComponent(latestStore.storeId)}&data=${encoded}`;
+  return `${baseUrl}${separator}store=${encodeURIComponent(latestStore.storeId)}`;
 }
 
 function renderQrPreview() {
@@ -178,7 +145,6 @@ function renderMenu() {
   const container = document.getElementById("menuContainer");
   const counterEl = document.getElementById("menuCounter");
   if (!container) return;
-
   let menuTersaring = [...menuCustom];
   if (kataKunciCari !== "") {
     const keyword = kataKunciCari.toLowerCase();
@@ -186,15 +152,12 @@ function renderMenu() {
       item.nama.toLowerCase().includes(keyword) || item.deskripsi.toLowerCase().includes(keyword)
     );
   }
-
   if (counterEl) counterEl.textContent = `${menuTersaring.length} Menu`;
   container.innerHTML = "";
-
   if (menuTersaring.length === 0) {
     container.innerHTML = `<div class="empty-search-state" style="text-align:center; padding:30px; color:var(--text-muted);"><p>Belum ada menu kustom. Klik ikon ⚙️ di kanan atas untuk menambah menu.</p></div>`;
     return;
   }
-
   menuTersaring.forEach((item) => {
     const card = document.createElement("article");
     card.className = "menu-card";
@@ -216,21 +179,17 @@ function renderMenu() {
 function renderAdminCustomMenuList() {
   const container = document.getElementById("customMenuListAdmin");
   if (!container) return;
-
   let filteredList = menuCustom;
   if (kataKunciCariAdminModal !== "") {
     const kw = kataKunciCariAdminModal.toLowerCase();
     filteredList = menuCustom.filter(item => item.nama.toLowerCase().includes(kw));
   }
-
   let htmlContent = `<div style="margin-bottom: 12px;"><input type="text" id="searchAdminModalInput" placeholder="🔍 Cari menu..." value="${kataKunciCariAdminModal}" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; outline: none;"></div>`;
-
   if (menuCustom.length === 0) {
     htmlContent += `<small style="color:var(--text-muted); display:block; text-align:center; padding: 10px;">Belum ada menu kustom.</small>`;
     container.innerHTML = htmlContent;
     return;
   }
-
   let itemsHtml = '<div style="display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px;">';
   filteredList.forEach((item) => {
     const realIndex = menuCustom.findIndex(m => m.id === item.id);
@@ -252,7 +211,6 @@ function renderAdminCustomMenuList() {
   });
   itemsHtml += '</div>';
   container.innerHTML = htmlContent + itemsHtml;
-
   const searchInput = document.getElementById("searchAdminModalInput");
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
@@ -302,16 +260,11 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-// Download Kartu Barcode Profesional (1x Download untuk Akun Toko yang Sama)
 async function downloadStyledBarcodeCard() {
   if (typeof QRCode === "undefined") return alert("Library QRCode belum termuat.");
-
-  // Pastikan data terbaru sudah tersinkron ke cloud sebelum membuat kartu
   await pushDataToCloudSync();
-
   const fullClientUrl = buildSyncedClientUrl();
   const tempContainer = document.createElement("div");
-
   new QRCode(tempContainer, {
     text: fullClientUrl,
     width: 420,
@@ -320,32 +273,25 @@ async function downloadStyledBarcodeCard() {
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
   });
-
   setTimeout(() => {
     const qrCanvas = tempContainer.querySelector("canvas");
     if (!qrCanvas) return alert("Gagal merender QR Code.");
-
     const W = 640;
     const H = 920;
     const finalCanvas = document.createElement("canvas");
     finalCanvas.width = W;
     finalCanvas.height = H;
     const ctx = finalCanvas.getContext("2d");
-
-    // 1. Latar Belakang Luar Biru Modern
     const bgGrad = ctx.createLinearGradient(0, 0, W, H);
     bgGrad.addColorStop(0, "#60a5fa");
     bgGrad.addColorStop(0.5, "#3b82f6");
     bgGrad.addColorStop(1, "#2563eb");
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
-
-    // 2. Kartu Utama Putih Bersih
     const cardX = 36;
     const cardY = 36;
     const cardW = W - 72;
     const cardH = H - 72;
-
     ctx.save();
     ctx.shadowColor = "rgba(0, 0, 0, 0.22)";
     ctx.shadowBlur = 24;
@@ -354,12 +300,9 @@ async function downloadStyledBarcodeCard() {
     roundRect(ctx, cardX, cardY, cardW, cardH, 28);
     ctx.fill();
     ctx.restore();
-
     ctx.save();
     roundRect(ctx, cardX, cardY, cardW, cardH, 28);
     ctx.clip();
-
-    // 3. Motif Geometris Halus di Bawah Kartu
     ctx.strokeStyle = "rgba(203, 213, 225, 0.45)";
     ctx.lineWidth = 2;
     for (let gx = cardX; gx < cardX + cardW; gx += 40) {
@@ -373,8 +316,6 @@ async function downloadStyledBarcodeCard() {
         ctx.stroke();
       }
     }
-
-    // 4. Aksen Segitiga Merah & Pita Emas
     ctx.fillStyle = "#ef4444";
     ctx.beginPath();
     ctx.moveTo(cardX, 230);
@@ -382,14 +323,12 @@ async function downloadStyledBarcodeCard() {
     ctx.lineTo(cardX, 410);
     ctx.closePath();
     ctx.fill();
-
     ctx.beginPath();
     ctx.moveTo(cardX + cardW, cardY + cardH - 170);
     ctx.lineTo(cardX + cardW, cardY + cardH);
     ctx.lineTo(cardX + cardW - 170, cardY + cardH);
     ctx.closePath();
     ctx.fill();
-
     ctx.fillStyle = "#f59e0b";
     ctx.beginPath();
     ctx.moveTo(cardX + cardW, cardY + cardH - 195);
@@ -398,34 +337,27 @@ async function downloadStyledBarcodeCard() {
     ctx.lineTo(cardX + cardW - 195, cardY + cardH);
     ctx.closePath();
     ctx.fill();
-
-    // 5. Header Kartu: Logo Singkatan Toko & Menu Digital
     const logoText = (storeIdentity.logo || "CS").toUpperCase();
     const logoBoxX = cardX + 36;
     const logoBoxY = cardY + 34;
-
     const logoGrad = ctx.createLinearGradient(logoBoxX, logoBoxY, logoBoxX + 64, logoBoxY + 64);
     logoGrad.addColorStop(0, "#f59e0b");
     logoGrad.addColorStop(1, "#b45309");
     ctx.fillStyle = logoGrad;
     roundRect(ctx, logoBoxX, logoBoxY, 64, 64, 16);
     ctx.fill();
-
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 24px 'Segoe UI', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(logoText, logoBoxX + 32, logoBoxY + 33);
-
     ctx.textAlign = "left";
     ctx.fillStyle = "#0f172a";
     ctx.font = "900 22px 'Segoe UI', sans-serif";
     ctx.fillText("MENU DIGITAL", logoBoxX + 78, logoBoxY + 22);
-
     ctx.fillStyle = "#475569";
     ctx.font = "600 13px 'Segoe UI', sans-serif";
     ctx.fillText("Pesan Cepat Tanpa Antre", logoBoxX + 78, logoBoxY + 46);
-
     const badgeRightX = cardX + cardW - 110;
     const badgeRightY = cardY + 38;
     ctx.fillStyle = "#fef2f2";
@@ -435,7 +367,6 @@ async function downloadStyledBarcodeCard() {
     ctx.lineWidth = 1.5;
     roundRect(ctx, badgeRightX, badgeRightY, 74, 54, 12);
     ctx.stroke();
-
     ctx.fillStyle = "#dc2626";
     ctx.font = "900 15px 'Segoe UI', sans-serif";
     ctx.textAlign = "center";
@@ -443,20 +374,16 @@ async function downloadStyledBarcodeCard() {
     ctx.fillStyle = "#1e3a8a";
     ctx.font = "800 12px 'Segoe UI', sans-serif";
     ctx.fillText("ORDER", badgeRightX + 37, badgeRightY + 39);
-
     ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(cardX + 36, cardY + 118);
     ctx.lineTo(cardX + cardW - 36, cardY + 118);
     ctx.stroke();
-
-    // 6. Nama Toko & Info QRIS / Rekening
     ctx.textAlign = "center";
     ctx.fillStyle = "#0f172a";
     ctx.font = "900 28px 'Segoe UI', sans-serif";
     ctx.fillText(storeIdentity.name.toUpperCase(), W / 2, cardY + 162);
-
     const qrisInfo = storeIdentity.qrisText || "OLAN MAULANA Bank Mandiri 1630011235432";
     ctx.fillStyle = "#475569";
     ctx.font = "600 14px 'Segoe UI', sans-serif";
@@ -466,12 +393,9 @@ async function downloadStyledBarcodeCard() {
     } else {
       ctx.fillText(qrisInfo, W / 2, cardY + 196);
     }
-
-    // 7. Bingkai Putih & QR Code Utama
     const qrBoxSize = 380;
     const qrBoxX = (W - qrBoxSize) / 2;
     const qrBoxY = cardY + 232;
-
     ctx.save();
     ctx.shadowColor = "rgba(15, 23, 42, 0.08)";
     ctx.shadowBlur = 16;
@@ -483,37 +407,27 @@ async function downloadStyledBarcodeCard() {
     roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 20);
     ctx.stroke();
     ctx.restore();
-
     ctx.drawImage(qrCanvas, qrBoxX + 18, qrBoxY + 18, qrBoxSize - 36, qrBoxSize - 36);
-
-    // Badge Singkatan Logo Proporsional di Tengah (aman dengan CorrectLevel.H)
     const centerBadgeSize = 44;
     const centerX = W / 2 - centerBadgeSize / 2;
     const centerY = qrBoxY + qrBoxSize / 2 - centerBadgeSize / 2;
     ctx.fillStyle = "#ffffff";
     roundRect(ctx, centerX - 4, centerY - 4, centerBadgeSize + 8, centerBadgeSize + 8, 12);
     ctx.fill();
-
     ctx.fillStyle = "#0f172a";
     roundRect(ctx, centerX, centerY, centerBadgeSize, centerBadgeSize, 9);
     ctx.fill();
-
     ctx.fillStyle = "#f59e0b";
     ctx.font = "900 15px 'Segoe UI', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(logoText, W / 2, qrBoxY + qrBoxSize / 2 + 1);
-
-    // 8. Teks Ajakan Bawah
     ctx.fillStyle = "#0f172a";
     ctx.font = "900 18px 'Segoe UI', sans-serif";
     ctx.fillText("SATU BARCODE UNTUK SEMUA MENU", W / 2, qrBoxY + qrBoxSize + 38);
-
     ctx.fillStyle = "#475569";
     ctx.font = "500 13px 'Segoe UI', sans-serif";
     ctx.fillText("Scan menggunakan Kamera HP / Google Lens untuk memesan", W / 2, qrBoxY + qrBoxSize + 64);
-
-    // 9. Footer Kiri Bawah
     ctx.textAlign = "left";
     ctx.fillStyle = "#334155";
     ctx.font = "600 12px 'Segoe UI', sans-serif";
@@ -521,9 +435,7 @@ async function downloadStyledBarcodeCard() {
     ctx.fillStyle = "#64748b";
     ctx.font = "500 12px 'Segoe UI', sans-serif";
     ctx.fillText(`WhatsApp Pesanan: +${storeIdentity.wa || "6287877611218"}`, cardX + 36, cardY + cardH - 28);
-
     ctx.restore();
-
     finalCanvas.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -544,12 +456,10 @@ document.addEventListener("DOMContentLoaded", () => {
     mainAppContent.style.display = "block";
     inisisasiAplikasiUtama();
   }
-
   document.getElementById("btnTogglePassword").addEventListener("click", () => {
     const inputPass = document.getElementById("inputAdminPassword");
     inputPass.type = inputPass.type === "password" ? "text" : "password";
   });
-
   document.getElementById("btnLoginAdmin").addEventListener("click", () => {
     if (document.getElementById("inputAdminPassword").value.trim() === ADMIN_PASS_VALID) {
       localStorage.setItem("umkm_admin_logged", "true");
@@ -561,7 +471,6 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Sandi Salah! Gunakan: Kernaden");
     }
   });
-
   document.getElementById("btnLogoutApp").addEventListener("click", () => {
     localStorage.removeItem("umkm_admin_logged");
     location.reload();
@@ -581,11 +490,9 @@ function inisisasiAplikasiUtama() {
   if (document.getElementById("settingClientUrl")) {
     document.getElementById("settingClientUrl").value = storeIdentity.clientUrl || "https://aplikasi-umkm-five.vercel.app/";
   }
-
   renderMenu();
   renderQrPreview();
   pushDataToCloudSync();
-
   const searchInput = document.getElementById("searchMenuInput");
   const btnClearSearch = document.getElementById("btnClearSearch");
   if (searchInput) {
@@ -603,7 +510,6 @@ function inisisasiAplikasiUtama() {
       renderMenu();
     });
   }
-
   document.getElementById("btnOpenSettings").addEventListener("click", () => {
     renderAdminCustomMenuList();
     renderQrPreview();
@@ -612,14 +518,12 @@ function inisisasiAplikasiUtama() {
   document.getElementById("btnCloseSettingsModal").addEventListener("click", () => {
     document.getElementById("settingsModal").classList.remove("active");
   });
-
   const tabButtons = document.querySelectorAll(".admin-tab-btn");
   const tabContents = {
     store: document.getElementById("tabContentStore"),
     menu: document.getElementById("tabContentMenu"),
     barcode: document.getElementById("tabContentBarcode")
   };
-
   tabButtons.forEach(btn => {
     btn.addEventListener("click", () => {
       tabButtons.forEach(b => b.classList.remove("active"));
@@ -633,7 +537,6 @@ function inisisasiAplikasiUtama() {
       }
     });
   });
-
   const clientUrlInput = document.getElementById("settingClientUrl");
   if (clientUrlInput) {
     clientUrlInput.addEventListener("input", (e) => {
@@ -641,14 +544,16 @@ function inisisasiAplikasiUtama() {
       simpanStateLocal();
     });
   }
-
   document.getElementById("btnSaveStoreSettings").addEventListener("click", () => {
     const rawId = document.getElementById("settingStoreId") ? document.getElementById("settingStoreId").value.trim() : "";
     const name = document.getElementById("settingStoreName").value.trim();
     const logo = document.getElementById("settingStoreLogo").value.trim();
     const wa = document.getElementById("settingStoreWa") ? document.getElementById("settingStoreWa").value.trim() : "6287877611218";
     if (!name) return alert("Nama toko wajib diisi!");
-    storeIdentity.storeId = generateStoreSlug(rawId || name);
+    // PERBAIKAN ADMIN 2: Kunci storeId - jangan ubah kalau sudah ada
+    if (!storeIdentity.storeId) {
+      storeIdentity.storeId = generateStoreSlug(rawId || name);
+    }
     if (document.getElementById("settingStoreId")) {
       document.getElementById("settingStoreId").value = storeIdentity.storeId;
     }
@@ -659,27 +564,22 @@ function inisisasiAplikasiUtama() {
     applyStoreIdentity();
     tampilkanToast("✓ Identitas toko disimpan & disinkronkan!");
   });
-
   document.getElementById("btnSaveQrisSettings").addEventListener("click", () => {
     const qrisText = document.getElementById("settingQrisText").value.trim();
     storeIdentity.qrisText = qrisText;
     simpanStateLocal();
     tampilkanToast("✓ Info pembayaran disimpan & disinkronkan!");
   });
-
   document.getElementById("btnSaveNewMenu").addEventListener("click", () => {
     const name = document.getElementById("addMenuName").value.trim();
     const kategori = document.getElementById("addMenuCategory").value;
     const harga = parseInt(document.getElementById("addMenuPrice").value);
     const imgUrl = document.getElementById("addMenuImgUrl").value.trim();
     const desc = document.getElementById("addMenuDesc").value.trim();
-
     if (!name || isNaN(harga)) return alert("Lengkapi Nama dan Harga Menu!");
-
     const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
     const labelKategori = katObj ? katObj.nama : "Lainnya";
     const gambarSrc = imgUrl || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
-
     if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
       menuCustom[editMenuIndex] = {
         ...menuCustom[editMenuIndex],
@@ -698,18 +598,15 @@ function inisisasiAplikasiUtama() {
       });
       tampilkanToast("✓ Menu baru ditambahkan & otomatis masuk ke Client!");
     }
-
     document.getElementById("addMenuName").value = "";
     document.getElementById("addMenuPrice").value = "";
     document.getElementById("addMenuImgUrl").value = "";
     document.getElementById("addMenuDesc").value = "";
     document.getElementById("formMenuHeaderTitle").textContent = "Tambah Menu Baru & Link Foto";
     document.getElementById("btnSaveNewMenu").textContent = "Simpan & Sinkronkan ke Cloud";
-
     simpanStateLocal();
     renderMenu();
     renderAdminCustomMenuList();
   });
-
   document.getElementById("btnDownloadBarcodeQr").addEventListener("click", downloadStyledBarcodeCard);
 }
