@@ -1,13 +1,27 @@
+const ADMIN_PASS_VALID = "Kernaden";
 const CLOUD_SYNC_ENDPOINT = "https://kvdb.io/A9xK7mP2qL8vR4nW6tY1zB";
-let NOMOR_WA = "6287877611218";
 
-let storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {
-  storeId: "warung-sederhana",
-  name: "Warung Sederhana",
-  logo: "WS",
-  wa: "6287877611218",
-  qrisText: "OLAN MAULANA Bank Mandiri 1630011235432"
+function generateStoreSlug(name) {
+  return (name || "umkm-store")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "umkm-store";
+}
+
+let savedIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || {};
+let storeIdentity = {
+  storeId: savedIdentity.storeId || generateStoreSlug(savedIdentity.name || "Caffe Santai HIHIHI"),
+  name: savedIdentity.name || "Caffe Santai HIHIHI",
+  logo: savedIdentity.logo || "CS",
+  wa: savedIdentity.wa || "6287877611218",
+  qrisText: savedIdentity.qrisText || "OLAN MAULANA Bank Mandiri 1630011235432",
+  clientUrl: savedIdentity.clientUrl || "https://aplikasi-umkm-five.vercel.app/"
 };
+
+let menuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom")) || [];
+let kataKunciCari = "";
+let kataKunciCariAdminModal = "";
+let editMenuIndex = null;
 
 const DAFTAR_KATEGORI = [
   { id: "semua", nama: "Semua Menu" },
@@ -21,105 +35,19 @@ const DAFTAR_KATEGORI = [
   { id: "tambahan", nama: "Tambahan / Topping" }
 ];
 
-let defaultMenuList = [
-  { 
-    id: 1718000001, 
-    nama: "Es Jeruk", 
-    kategori: "non-kopi", 
-    labelKategori: "Non-Kopi", 
-    harga: 15000, 
-    deskripsi: "Segar & Enak", 
-    gambar: "https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=80" 
+function applyStoreIdentity() {
+  const isAdminLogged = localStorage.getItem("umkm_admin_logged") === "true";
+  if (!isAdminLogged || !storeIdentity.name) {
+    document.title = "Panel Admin";
+    return;
   }
-];
-
-function getLabelKategori(katId, fallbackLabel) {
-  if (fallbackLabel) return fallbackLabel;
-  const found = DAFTAR_KATEGORI.find(k => k.id === katId);
-  return found ? found.nama : "Menu";
-}
-
-// Fungsi utama menarik menu terbaru secara real-time dari Cloud berdasarkan parameter ?store=...
-async function tarikMenuTerbaruDariCloud() {
-  const params = new URLSearchParams(window.location.search);
-  const storeParam = params.get("store");
-  if (storeParam) {
-    storeIdentity.storeId = storeParam;
-    localStorage.setItem("umkm_store_identity", JSON.stringify(storeIdentity));
-  }
-
-  const currentStore = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
-  const activeStoreId = currentStore.storeId || "warung-sederhana";
-
-  try {
-    const res = await fetch(`${CLOUD_SYNC_ENDPOINT}/store_${encodeURIComponent(activeStoreId)}?t=${Date.now()}`, {
-      method: "GET",
-      cache: "no-store"
-    });
-    if (!res.ok) return;
-
-    const cloudData = await res.json();
-    if (cloudData && cloudData.s) {
-      storeIdentity = {
-        storeId: activeStoreId,
-        name: cloudData.s.n || storeIdentity.name,
-        logo: cloudData.s.l || storeIdentity.logo,
-        wa: cloudData.s.w || storeIdentity.wa || "6287877611218",
-        qrisText: cloudData.s.q !== undefined ? cloudData.s.q : storeIdentity.qrisText
-      };
-      localStorage.setItem("umkm_store_identity", JSON.stringify(storeIdentity));
-    }
-
-    if (cloudData && Array.isArray(cloudData.m)) {
-      const cloudMenus = cloudData.m.map((item, index) => ({
-        id: item.i || (1720000000 + index),
-        nama: item.n,
-        kategori: item.k || "kopi",
-        labelKategori: getLabelKategori(item.k, item.lk),
-        harga: Number(item.h),
-        deskripsi: item.d || "",
-        gambar: item.g || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(item.n)}`
-      }));
-      localStorage.setItem("umkm_menu_custom", JSON.stringify(cloudMenus));
-      applyClientIdentity();
-      renderKategoriDrawer();
-      renderMenu();
-    }
-  } catch (err) {
-    console.warn("Cloud sync tidak terjangkau:", err);
-  }
-}
-
-storeIdentity = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
-NOMOR_WA = storeIdentity.wa || "6287877611218";
-
-let savedMenuCustom = JSON.parse(localStorage.getItem("umkm_menu_custom"));
-let DATA_MENU = Array.isArray(savedMenuCustom) ? savedMenuCustom : [...defaultMenuList];
-
-let keranjang = JSON.parse(localStorage.getItem("umkm_keranjang")) || [];
-let kategoriAktif = localStorage.getItem("umkm_kategori_aktif") || "semua";
-let itemDipilih = null;
-let qtyModal = 1;
-let kataKunciCari = "";
-let metodePembayaran = "tunai";
-
-function applyClientIdentity() {
-  const currentStore = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
-  NOMOR_WA = currentStore.wa || "6287877611218";
-  if (currentStore.name) {
-    document.title = `${currentStore.name} - Menu Digital`;
-    document.querySelectorAll("#navBrandTitle").forEach(el => el.textContent = currentStore.name);
-    document.querySelectorAll("#navBrandLogo").forEach(el => el.textContent = currentStore.logo);
-  }
+  document.title = `Admin - ${storeIdentity.name}`;
+  document.querySelectorAll("#navBrandTitle").forEach(el => el.textContent = storeIdentity.name);
+  document.querySelectorAll("#navBrandLogo").forEach(el => el.textContent = storeIdentity.logo);
 }
 
 function formatRupiah(angka) {
-  return "Rp " + angka.toLocaleString("id-ID");
-}
-
-function simpanStateLocal() {
-  localStorage.setItem("umkm_keranjang", JSON.stringify(keranjang));
-  localStorage.setItem("umkm_kategori_aktif", kategoriAktif);
+  return "Rp " + Number(angka).toLocaleString("id-ID");
 }
 
 function tampilkanToast(pesan) {
@@ -127,77 +55,113 @@ function tampilkanToast(pesan) {
   if (!toast) return;
   toast.textContent = pesan;
   toast.classList.add("show");
-  setTimeout(() => { toast.classList.remove("show"); }, 2500);
+  setTimeout(() => { toast.classList.remove("show"); }, 2600);
 }
 
-function muatDataMenuTerbaru() {
-  const latestCustomMenu = JSON.parse(localStorage.getItem("umkm_menu_custom"));
-  if (Array.isArray(latestCustomMenu)) {
-    DATA_MENU = [...latestCustomMenu];
-  } else {
-    DATA_MENU = [...defaultMenuList];
+async function pushDataToCloudSync() {
+  const indicator = document.getElementById("syncStatusIndicator");
+  if (indicator) {
+    indicator.style.color = "#fbbf24";
+    indicator.textContent = "⏳ Menyinkronkan menu ke Cloud...";
   }
+
+  const payload = {
+    updatedAt: Date.now(),
+    storeId: storeIdentity.storeId,
+    s: {
+      n: storeIdentity.name,
+      l: storeIdentity.logo,
+      w: storeIdentity.wa || "6287877611218",
+      q: storeIdentity.qrisText || ""
+    },
+    m: menuCustom.map(item => ({
+      i: item.id,
+      n: item.nama,
+      k: item.kategori,
+      lk: item.labelKategori,
+      h: Number(item.harga),
+      d: item.deskripsi || "",
+      g: item.gambar || ""
+    }))
+  };
+
+  try {
+    const res = await fetch(`${CLOUD_SYNC_ENDPOINT}/store_${encodeURIComponent(storeIdentity.storeId)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      if (indicator) {
+        indicator.style.color = "#4ade80";
+        indicator.textContent = `☁️ Tersinkron ke Cloud (${menuCustom.length} Menu) • 1 Barcode Aktif`;
+      }
+      return true;
+    }
+  } catch (e) {
+    console.warn("Cloud sync offline:", e);
+  }
+
+  if (indicator) {
+    indicator.style.color = "#4ade80";
+    indicator.textContent = `☁️ Siap (${menuCustom.length} Menu tersimpan)`;
+  }
+  return false;
 }
 
-function renderKategoriDrawer() {
-  const listEl = document.getElementById("categoryList");
-  if (!listEl) return;
-  listEl.innerHTML = "";
+function simpanStateLocal() {
+  localStorage.setItem("umkm_menu_custom", JSON.stringify(menuCustom));
+  localStorage.setItem("umkm_store_identity", JSON.stringify(storeIdentity));
+  renderQrPreview();
+  pushDataToCloudSync();
+}
 
-  muatDataMenuTerbaru();
+function buildSyncedClientUrl() {
+  const latestStore = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
+  const baseUrlInput = document.getElementById("settingClientUrl");
+  let baseUrl = (baseUrlInput && baseUrlInput.value.trim()) ? baseUrlInput.value.trim() : (latestStore.clientUrl || "https://aplikasi-umkm-five.vercel.app/");
+  if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+    baseUrl = "https://" + baseUrl;
+  }
+  baseUrl = baseUrl.split("?")[0];
+  if (!baseUrl.endsWith("/")) baseUrl += "/";
 
-  DAFTAR_KATEGORI.forEach((kat) => {
-    const jumlah = kat.id === "semua" ? DATA_MENU.length : DATA_MENU.filter((m) => m.kategori === kat.id).length;
-    const li = document.createElement("li");
-    const btn = document.createElement("button");
-    if (kat.id === kategoriAktif) btn.classList.add("active");
+  return `${baseUrl}?store=${encodeURIComponent(latestStore.storeId)}`;
+}
 
-    btn.innerHTML = `<span>${kat.nama}</span><span class="cat-count">${jumlah}</span>`;
-    btn.addEventListener("click", () => {
-      kategoriAktif = kat.id;
-      simpanStateLocal();
-      renderKategoriDrawer();
-      renderMenu();
-      const drawer = document.getElementById("categoryDrawer");
-      const overlay = document.getElementById("drawerOverlay");
-      if (drawer) drawer.classList.remove("active");
-      if (overlay) overlay.classList.remove("active");
-    });
-    li.appendChild(btn);
-    listEl.appendChild(li);
+function renderQrPreview() {
+  const hiddenContainer = document.getElementById("hiddenQrRender");
+  if (!hiddenContainer || typeof QRCode === "undefined") return;
+  const fullClientUrl = buildSyncedClientUrl();
+  hiddenContainer.innerHTML = "";
+  new QRCode(hiddenContainer, {
+    text: fullClientUrl,
+    width: 240,
+    height: 240,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
   });
 }
 
 function renderMenu() {
   const container = document.getElementById("menuContainer");
-  const titleEl = document.getElementById("activeCategoryTitle");
   const counterEl = document.getElementById("menuCounter");
   if (!container) return;
 
-  muatDataMenuTerbaru();
-
-  const katObj = DAFTAR_KATEGORI.find((k) => k.id === kategoriAktif);
-  const namaKategori = katObj ? katObj.nama : "Semua Menu";
-  let menuTersaring = kategoriAktif === "semua" ? DATA_MENU : DATA_MENU.filter((item) => item.kategori === kategoriAktif);
-
+  let menuTersaring = [...menuCustom];
   if (kataKunciCari !== "") {
     const keyword = kataKunciCari.toLowerCase();
     menuTersaring = menuTersaring.filter((item) =>
       item.nama.toLowerCase().includes(keyword) || item.deskripsi.toLowerCase().includes(keyword)
     );
-    if (titleEl) titleEl.textContent = `Pencarian: "${kataKunciCari}"`;
-  } else {
-    if (titleEl) titleEl.textContent = namaKategori;
   }
 
   if (counterEl) counterEl.textContent = `${menuTersaring.length} Menu`;
   container.innerHTML = "";
 
   if (menuTersaring.length === 0) {
-    const emptyMsg = kataKunciCari !== ""
-      ? `Menu "<strong>${kataKunciCari}</strong>" tidak ditemukan.`
-      : "Belum ada menu yang tersedia di kategori ini.";
-    container.innerHTML = `<div class="empty-search-state" style="text-align:center; padding:30px; color:var(--text-muted);"><p>${emptyMsg}</p></div>`;
+    container.innerHTML = `<div class="empty-search-state" style="text-align:center; padding:30px; color:var(--text-muted);"><p>Belum ada menu kustom. Klik ikon ⚙️ di kanan atas untuk menambah menu.</p></div>`;
     return;
   }
 
@@ -205,259 +169,410 @@ function renderMenu() {
     const card = document.createElement("article");
     card.className = "menu-card";
     card.innerHTML = `
-      <div class="card-img-box" onclick="bukaModalItem(${item.id})">
+      <div class="card-img-box">
         <img src="${item.gambar}" alt="${item.nama}" onerror="this.src='https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(item.nama)}'">
         <span class="card-cat-label">${item.labelKategori}</span>
       </div>
       <div class="card-content">
-        <h4 onclick="bukaModalItem(${item.id})">${item.nama}</h4>
+        <h4>${item.nama}</h4>
         <p class="card-desc">${item.deskripsi}</p>
-        <div class="card-footer">
-          <span class="price-text">${formatRupiah(item.harga)}</span>
-          <button type="button" class="btn-pesan" onclick="bukaModalItem(${item.id})">Pesan +</button>
-        </div>
+        <div class="card-footer"><span class="price-text">${formatRupiah(item.harga)}</span></div>
       </div>
     `;
     container.appendChild(card);
   });
 }
 
-function bukaModalItem(id) {
-  muatDataMenuTerbaru();
-  itemDipilih = DATA_MENU.find((m) => m.id === id);
-  if (!itemDipilih) return;
+function renderAdminCustomMenuList() {
+  const container = document.getElementById("customMenuListAdmin");
+  if (!container) return;
 
-  qtyModal = 1;
-  document.getElementById("modalItemImg").src = itemDipilih.gambar;
-  document.getElementById("modalItemCat").textContent = itemDipilih.labelKategori;
-  document.getElementById("modalItemName").textContent = itemDipilih.nama;
-  document.getElementById("modalItemDesc").textContent = itemDipilih.deskripsi;
-  document.getElementById("inputCatatan").value = "";
-  document.getElementById("modalQtyValue").textContent = qtyModal;
-  document.getElementById("modalUnitPrice").textContent = formatRupiah(itemDipilih.harga);
-  document.getElementById("modalTotalPrice").textContent = formatRupiah(itemDipilih.harga * qtyModal);
+  let filteredList = menuCustom;
+  if (kataKunciCariAdminModal !== "") {
+    const kw = kataKunciCariAdminModal.toLowerCase();
+    filteredList = menuCustom.filter(item => item.nama.toLowerCase().includes(kw));
+  }
 
-  document.getElementById("itemModal").classList.add("active");
+  let htmlContent = `<div style="margin-bottom: 12px;"><input type="text" id="searchAdminModalInput" placeholder="🔍 Cari menu..." value="${kataKunciCariAdminModal}" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-main); padding: 10px 14px; border-radius: 10px; outline: none;"></div>`;
+
+  if (menuCustom.length === 0) {
+    htmlContent += `<small style="color:var(--text-muted); display:block; text-align:center; padding: 10px;">Belum ada menu kustom.</small>`;
+    container.innerHTML = htmlContent;
+    return;
+  }
+
+  let itemsHtml = '<div style="display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 4px;">';
+  filteredList.forEach((item) => {
+    const realIndex = menuCustom.findIndex(m => m.id === item.id);
+    itemsHtml += `
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-color); gap: 10px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="${item.gambar}" style="width:42px; height:42px; object-fit:cover; border-radius:8px;" onerror="this.src='https://placehold.co/42'">
+          <div>
+            <strong style="font-size: 0.95rem; display:block; color:var(--text-main);">${item.nama}</strong>
+            <small style="color: var(--accent);">${item.labelKategori} • ${formatRupiah(item.harga)}</small>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <button type="button" onclick="mulaiEditMenuCustom(${realIndex})" style="padding: 6px 12px; font-size: 0.8rem; background: rgba(245, 158, 11, 0.15); border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; cursor: pointer; font-weight: 600;">Edit</button>
+          <button type="button" onclick="hapusMenuCustom(${realIndex})" style="padding: 6px 12px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); color: var(--danger); border-radius: 8px; cursor: pointer; font-weight: 600;">Hapus</button>
+        </div>
+      </div>
+    `;
+  });
+  itemsHtml += '</div>';
+  container.innerHTML = htmlContent + itemsHtml;
+
+  const searchInput = document.getElementById("searchAdminModalInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      kataKunciCariAdminModal = e.target.value.trim();
+      renderAdminCustomMenuList();
+      const updatedInput = document.getElementById("searchAdminModalInput");
+      if (updatedInput) { updatedInput.focus(); updatedInput.setSelectionRange(updatedInput.value.length, updatedInput.value.length); }
+    });
+  }
 }
 
-function tutupModalItem() {
-  document.getElementById("itemModal").classList.remove("active");
+function mulaiEditMenuCustom(index) {
+  const item = menuCustom[index];
+  if (!item) return;
+  editMenuIndex = index;
+  document.getElementById("addMenuName").value = item.nama;
+  document.getElementById("addMenuCategory").value = item.kategori;
+  document.getElementById("addMenuPrice").value = item.harga;
+  document.getElementById("addMenuImgUrl").value = item.gambar;
+  document.getElementById("addMenuDesc").value = item.deskripsi;
+  document.getElementById("formMenuHeaderTitle").textContent = `✏️ Edit Menu: ${item.nama}`;
+  document.getElementById("btnSaveNewMenu").textContent = "💾 Simpan & Sinkronkan Perubahan";
+  tampilkanToast(`Mode Edit: ${item.nama}`);
 }
 
-function tambahKeKeranjang() {
-  if (!itemDipilih) return;
-  const catatan = document.getElementById("inputCatatan").value.trim();
+function hapusMenuCustom(index) {
+  if (confirm("Yakin ingin menghapus menu ini?")) {
+    menuCustom.splice(index, 1);
+    simpanStateLocal();
+    renderMenu();
+    renderAdminCustomMenuList();
+    tampilkanToast("✓ Menu dihapus & disinkronkan!");
+  }
+}
 
-  const indexSama = keranjang.findIndex((k) => k.id === itemDipilih.id && k.catatan.toLowerCase() === catatan.toLowerCase());
-  if (indexSama !== -1) {
-    keranjang[indexSama].qty += qtyModal;
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+async function downloadStyledBarcodeCard() {
+  if (typeof QRCode === "undefined") return alert("Library QRCode belum termuat.");
+  await pushDataToCloudSync();
+
+  const fullClientUrl = buildSyncedClientUrl();
+  const tempContainer = document.createElement("div");
+
+  new QRCode(tempContainer, {
+    text: fullClientUrl,
+    width: 420,
+    height: 420,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  setTimeout(() => {
+    const qrCanvas = tempContainer.querySelector("canvas");
+    if (!qrCanvas) return alert("Gagal merender QR Code.");
+
+    const W = 640;
+    const H = 920;
+    const finalCanvas = document.createElement("canvas");
+    finalCanvas.width = W;
+    finalCanvas.height = H;
+    const ctx = finalCanvas.getContext("2d");
+
+    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+    bgGrad.addColorStop(0, "#60a5fa");
+    bgGrad.addColorStop(0.5, "#3b82f6");
+    bgGrad.addColorStop(1, "#2563eb");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    const cardX = 36;
+    const cardY = 36;
+    const cardW = W - 72;
+    const cardH = H - 72;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0, 0, 0, 0.22)";
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 10;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, cardX, cardY, cardW, cardH, 28);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    roundRect(ctx, cardX, cardY, cardW, cardH, 28);
+    ctx.clip();
+
+    ctx.strokeStyle = "rgba(203, 213, 225, 0.45)";
+    ctx.lineWidth = 2;
+    for (let gx = cardX; gx < cardX + cardW; gx += 40) {
+      for (let gy = 480; gy < cardY + cardH; gy += 40) {
+        ctx.strokeRect(gx + 6, gy + 6, 28, 28);
+        ctx.beginPath();
+        ctx.moveTo(gx + 20, gy);
+        ctx.lineTo(gx + 20, gy + 40);
+        ctx.moveTo(gx, gy + 20);
+        ctx.lineTo(gx + 40, gy + 20);
+        ctx.stroke();
+      }
+    }
+
+    ctx.fillStyle = "#ef4444";
+    ctx.beginPath();
+    ctx.moveTo(cardX, 230);
+    ctx.lineTo(cardX + 75, 320);
+    ctx.lineTo(cardX, 410);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(cardX + cardW, cardY + cardH - 170);
+    ctx.lineTo(cardX + cardW, cardY + cardH);
+    ctx.lineTo(cardX + cardW - 170, cardY + cardH);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#f59e0b";
+    ctx.beginPath();
+    ctx.moveTo(cardX + cardW, cardY + cardH - 195);
+    ctx.lineTo(cardX + cardW, cardY + cardH - 170);
+    ctx.lineTo(cardX + cardW - 170, cardY + cardH);
+    ctx.lineTo(cardX + cardW - 195, cardY + cardH);
+    ctx.closePath();
+    ctx.fill();
+
+    const logoText = (storeIdentity.logo || "CS").toUpperCase();
+    const logoBoxX = cardX + 36;
+    const logoBoxY = cardY + 34;
+
+    const logoGrad = ctx.createLinearGradient(logoBoxX, logoBoxY, logoBoxX + 64, logoBoxY + 64);
+    logoGrad.addColorStop(0, "#f59e0b");
+    logoGrad.addColorStop(1, "#b45309");
+    ctx.fillStyle = logoGrad;
+    roundRect(ctx, logoBoxX, logoBoxY, 64, 64, 16);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 24px 'Segoe UI', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(logoText, logoBoxX + 32, logoBoxY + 33);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "900 22px 'Segoe UI', sans-serif";
+    ctx.fillText("MENU DIGITAL", logoBoxX + 78, logoBoxY + 22);
+
+    ctx.fillStyle = "#475569";
+    ctx.font = "600 13px 'Segoe UI', sans-serif";
+    ctx.fillText("Pesan Cepat Tanpa Antre", logoBoxX + 78, logoBoxY + 46);
+
+    const badgeRightX = cardX + cardW - 110;
+    const badgeRightY = cardY + 38;
+    ctx.fillStyle = "#fef2f2";
+    roundRect(ctx, badgeRightX, badgeRightY, 74, 54, 12);
+    ctx.fill();
+    ctx.strokeStyle = "#fecaca";
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, badgeRightX, badgeRightY, 74, 54, 12);
+    ctx.stroke();
+
+    ctx.fillStyle = "#dc2626";
+    ctx.font = "900 15px 'Segoe UI', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("SCAN", badgeRightX + 37, badgeRightY + 21);
+    ctx.fillStyle = "#1e3a8a";
+    ctx.font = "800 12px 'Segoe UI', sans-serif";
+    ctx.fillText("ORDER", badgeRightX + 37, badgeRightY + 39);
+
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 36, cardY + 118);
+    ctx.lineTo(cardX + cardW - 36, cardY + 118);
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "900 28px 'Segoe UI', sans-serif";
+    ctx.fillText(storeIdentity.name.toUpperCase(), W / 2, cardY + 162);
+
+    const qrisInfo = storeIdentity.qrisText || "OLAN MAULANA Bank Mandiri 1630011235432";
+    ctx.fillStyle = "#475569";
+    ctx.font = "600 14px 'Segoe UI', sans-serif";
+    ctx.fillText(qrisInfo, W / 2, cardY + 196);
+
+    const qrBoxSize = 380;
+    const qrBoxX = (W - qrBoxSize) / 2;
+    const qrBoxY = cardY + 232;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.08)";
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 20);
+    ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 2;
+    roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 20);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.drawImage(qrCanvas, qrBoxX + 18, qrBoxY + 18, qrBoxSize - 36, qrBoxSize - 36);
+
+    const centerBadgeSize = 44;
+    const centerX = W / 2 - centerBadgeSize / 2;
+    const centerY = qrBoxY + qrBoxSize / 2 - centerBadgeSize / 2;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, centerX - 4, centerY - 4, centerBadgeSize + 8, centerBadgeSize + 8, 12);
+    ctx.fill();
+
+    ctx.fillStyle = "#0f172a";
+    roundRect(ctx, centerX, centerY, centerBadgeSize, centerBadgeSize, 9);
+    ctx.fill();
+
+    ctx.fillStyle = "#f59e0b";
+    ctx.font = "900 15px 'Segoe UI', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(logoText, W / 2, qrBoxY + qrBoxSize / 2 + 1);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "900 18px 'Segoe UI', sans-serif";
+    ctx.fillText("SATU BARCODE UNTUK SEMUA MENU", W / 2, qrBoxY + qrBoxSize + 38);
+
+    ctx.fillStyle = "#475569";
+    ctx.font = "500 13px 'Segoe UI', sans-serif";
+    ctx.fillText("Scan menggunakan Kamera HP / Google Lens untuk memesan", W / 2, qrBoxY + qrBoxSize + 64);
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#334155";
+    ctx.font = "600 12px 'Segoe UI', sans-serif";
+    ctx.fillText(`ID Toko: ${storeIdentity.storeId}`, cardX + 36, cardY + cardH - 48);
+    ctx.fillStyle = "#64748b";
+    ctx.font = "500 12px 'Segoe UI', sans-serif";
+    ctx.fillText(`WhatsApp Pesanan: +${storeIdentity.wa || "6287877611218"}`, cardX + 36, cardY + cardH - 28);
+
+    ctx.restore();
+
+    finalCanvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kartu_barcode_${storeIdentity.storeId}.png`;
+      link.click();
+      tampilkanToast("✓ Kartu Barcode Permanen Berhasil Diunduh!");
+    }, "image/png");
+  }, 250);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  applyStoreIdentity();
+  const loginScreen = document.getElementById("loginScreen");
+  const mainAppContent = document.getElementById("mainAppContent");
+  
+  if (localStorage.getItem("umkm_admin_logged") === "true") {
+    if (loginScreen) loginScreen.style.display = "none";
+    if (mainAppContent) mainAppContent.style.display = "block";
+    inisisasiAplikasiUtama();
   } else {
-    keranjang.push({
-      id: itemDipilih.id,
-      nama: itemDipilih.nama,
-      harga: itemDipilih.harga,
-      qty: qtyModal,
-      catatan: catatan
+    if (loginScreen) loginScreen.style.display = "flex";
+    if (mainAppContent) mainAppContent.style.display = "none";
+  }
+
+  const btnTogglePassword = document.getElementById("btnTogglePassword") || document.querySelector(".btn-toggle-password") || document.getElementById("togglePassword");
+  const inputAdminPassword = document.getElementById("inputAdminPassword");
+  const btnLoginAdmin = document.getElementById("btnLoginAdmin");
+
+  if (btnTogglePassword && inputAdminPassword) {
+    btnTogglePassword.addEventListener("click", () => {
+      inputAdminPassword.type = inputAdminPassword.type === "password" ? "text" : "password";
+      btnTogglePassword.textContent = inputAdminPassword.type === "password" ? "Lihat" : "Sembunyikan";
     });
   }
 
-  simpanStateLocal();
-  updateTampilanKeranjang();
-  tutupModalItem();
-  tampilkanToast(`✓ ${itemDipilih.nama} masuk keranjang!`);
-}
+  if (btnLoginAdmin) {
+    // Mendukung klik maupun tekan Enter pada kolom password
+    const handleLogin = () => {
+      const passwordVal = inputAdminPassword ? inputAdminPassword.value.trim() : "";
+      if (passwordVal === ADMIN_PASS_VALID) {
+        localStorage.setItem("umkm_admin_logged", "true");
+        if (loginScreen) loginScreen.style.display = "none";
+        if (mainAppContent) mainAppContent.style.display = "block";
+        inisisasiAplikasiUtama();
+        const settingsModal = document.getElementById("settingsModal");
+        if (settingsModal) settingsModal.classList.add("active");
+      } else {
+        alert("Sandi Salah! Gunakan: Kernaden");
+        if (inputAdminPassword) {
+          inputAdminPassword.focus();
+          inputAdminPassword.select();
+        }
+      }
+    };
 
-function pilihMetodeBayar(metode) {
-  metodePembayaran = metode;
-  const btnTunai = document.getElementById("btnMethodTunai");
-  const btnQris = document.getElementById("btnMethodQris");
-  const qrisContainer = document.getElementById("qrisSectionContainer");
-  const displayQrisText = document.getElementById("displayQrisText");
-
-  const currentStore = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
-
-  if (metode === "tunai") {
-    if (btnTunai) btnTunai.classList.add("active");
-    if (btnQris) btnQris.classList.remove("active");
-    if (qrisContainer) qrisContainer.style.display = "none";
-  } else {
-    if (btnQris) btnQris.classList.add("active");
-    if (btnTunai) btnTunai.classList.remove("active");
-    if (qrisContainer) qrisContainer.style.display = "block";
-
-    if (displayQrisText) {
-      displayQrisText.textContent = currentStore.qrisText || "OLAN MAULANA Bank Mandiri 1630011235432";
-    }
-  }
-}
-
-function updateTampilanKeranjang() {
-  const totalQty = keranjang.reduce((acc, item) => acc + item.qty, 0);
-  const totalHarga = keranjang.reduce((acc, item) => acc + item.harga * item.qty, 0);
-
-  const badge = document.getElementById("cartCountBadge");
-  if (badge) badge.textContent = totalQty;
-  const floatingBar = document.getElementById("floatingCart");
-  if (floatingBar) {
-    if (totalQty > 0) {
-      floatingBar.style.display = "flex";
-      document.getElementById("floatingQty").textContent = `${totalQty} Item di Keranjang`;
-      document.getElementById("floatingTotal").textContent = formatRupiah(totalHarga);
-    } else {
-      floatingBar.style.display = "none";
+    btnLoginAdmin.addEventListener("click", handleLogin);
+    if (inputAdminPassword) {
+      inputAdminPassword.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleLogin();
+        }
+      });
     }
   }
 
-  const listContainer = document.getElementById("cartItemsList");
-  const checkoutSection = document.getElementById("checkoutFormSection");
-  if (!listContainer) return;
-
-  if (keranjang.length === 0) {
-    listContainer.innerHTML = `<div class="empty-cart" style="text-align:center; padding:20px; color:var(--text-muted);">Keranjang masih kosong.<br>Silakan pilih menu terlebih dahulu.</div>`;
-    if (checkoutSection) checkoutSection.style.display = "none";
-    return;
+  const logoutBtn = document.getElementById("btnLogoutApp");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("umkm_admin_logged");
+      location.reload();
+    });
   }
+});
 
-  if (checkoutSection) checkoutSection.style.display = "block";
-  listContainer.innerHTML = "";
+function inisisasiAplikasiUtama() {
+  const settingStoreId = document.getElementById("settingStoreId");
+  const settingStoreName = document.getElementById("settingStoreName");
+  const settingStoreLogo = document.getElementById("settingStoreLogo");
+  const settingStoreWa = document.getElementById("settingStoreWa");
+  const settingQrisText = document.getElementById("settingQrisText");
+  const settingClientUrl = document.getElementById("settingClientUrl");
 
-  keranjang.forEach((item, idx) => {
-    const div = document.createElement("div");
-    div.className = "cart-item";
-    div.innerHTML = `
-      <div class="cart-item-info">
-        <h4>${item.nama}</h4>
-        ${item.catatan ? `<span class="cart-item-note">Catatan: ${item.catatan}</span>` : ""}
-        <span class="cart-item-price">${formatRupiah(item.harga)} x ${item.qty} = <strong>${formatRupiah(item.harga * item.qty)}</strong></span>
-      </div>
-      <div class="cart-item-actions">
-        <button type="button" class="btn-mini" onclick="ubahQtyKeranjang(${idx}, -1)">−</button>
-        <span>${item.qty}</span>
-        <button type="button" class="btn-mini" onclick="ubahQtyKeranjang(${idx}, 1)">+</button>
-        <button type="button" class="btn-del" onclick="hapusItemKeranjang(${idx})">Hapus</button>
-      </div>
-    `;
-    listContainer.appendChild(div);
-  });
+  if (settingStoreId) settingStoreId.value = storeIdentity.storeId;
+  if (settingStoreName) settingStoreName.value = storeIdentity.name;
+  if (settingStoreLogo) settingStoreLogo.value = storeIdentity.logo;
+  if (settingStoreWa) settingStoreWa.value = storeIdentity.wa || "6287877611218";
+  if (settingQrisText) settingQrisText.value = storeIdentity.qrisText || "";
+  if (settingClientUrl) settingClientUrl.value = storeIdentity.clientUrl || "https://aplikasi-umkm-five.vercel.app/";
 
-  const grandTotalEl = document.getElementById("cartGrandTotal");
-  if (grandTotalEl) grandTotalEl.textContent = formatRupiah(totalHarga);
-}
-
-function ubahQtyKeranjang(index, delta) {
-  keranjang[index].qty += delta;
-  if (keranjang[index].qty <= 0) keranjang.splice(index, 1);
-  simpanStateLocal();
-  updateTampilanKeranjang();
-}
-
-function hapusItemKeranjang(index) {
-  keranjang.splice(index, 1);
-  simpanStateLocal();
-  updateTampilanKeranjang();
-}
-
-function kirimKeWhatsApp() {
-  const inputNama = document.getElementById("customerName");
-  const inputMeja = document.getElementById("tableNumber");
-  const namaPemesan = inputNama ? inputNama.value.trim() : "Tamu";
-  const teksMeja = inputMeja ? inputMeja.value.trim() : "";
-
-  if (!namaPemesan) {
-    alert("Mohon isi Nama Lengkap pemesan.");
-    if (inputNama) inputNama.focus();
-    return;
-  }
-  if (keranjang.length === 0) {
-    alert("Keranjang pesanan masih kosong.");
-    return;
-  }
-
-  const currentStore = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
-  const targetWa = currentStore.wa || NOMOR_WA;
-  const orderId = "ORD-" + Math.floor(100000 + Math.random() * 900000);
-
-  let infoLabel = "No. Meja";
-  let infoValue = teksMeja;
-  if (!teksMeja || teksMeja.toLowerCase() === "take away") {
-    infoLabel = "Keterangan";
-    infoValue = "Take Away";
-  }
-
-  let labelBayar = "Tunai (Bayar di Kasir)";
-  let statusBayar = "Pembayaran selesai (Cek segera Ya)";
-  if (metodePembayaran === "qris") {
-    labelBayar = "QRIS / Transfer (Kirim Bukti Pembayaran segera ya)";
-  }
-
-  let pesanWA = `*HALO ${currentStore.name.toUpperCase()}, SAYA MAU PESAN MENU*
-==============================
-`;
-  pesanWA += `*No. Order:* ${orderId}
-`;
-  pesanWA += `*Nama Pemesan:* ${namaPemesan}
-`;
-  pesanWA += `*${infoLabel}:* ${infoValue}
-`;
-  pesanWA += `*Pembayaran:* ${labelBayar}
-`;
-  pesanWA += `*Status:* ${statusBayar}
-`;
-  pesanWA += `==============================
-
-*DAFTAR PESANAN:*
-`;
-
-  let grandTotal = 0;
-  keranjang.forEach((item, i) => {
-    const subtotal = item.harga * item.qty;
-    grandTotal += subtotal;
-    pesanWA += `${i + 1}. *${item.nama}* (${item.qty}x) - ${formatRupiah(subtotal)}
-`;
-    if (item.catatan) pesanWA += `   _Catatan: ${item.catatan}_
-`;
-  });
-
-  pesanWA += `
-==============================
-*TOTAL BAYAR: ${formatRupiah(grandTotal)}*
-==============================
-
-`;
-  pesanWA += `Terima kasih banyak atas kunjungan dan pesanan Anda di *${currentStore.name}*! 🙏✨
-`;
-  pesanWA += `Kami sangat senang bisa melayani Anda. Semoga hari Anda menyenangkan! 😊`;
-
-  window.open(`https://wa.me/${targetWa}?text=${encodeURIComponent(pesanWA)}`, "_blank");
-
-  if (inputNama) inputNama.value = "";
-  if (inputMeja) inputMeja.value = "";
-  keranjang = [];
-  simpanStateLocal();
-  updateTampilanKeranjang();
-  const cartModal = document.getElementById("cartModal");
-  if (cartModal) cartModal.classList.remove("active");
-  tampilkanToast("✓ Pesanan berhasil dikirim ke WhatsApp!");
-}
-
-document.addEventListener("DOMContentLoaded", async () => {
-  // Tarik data terbaru dari Cloud Sync saat halaman Client dibuka
-  await tarikMenuTerbaruDariCloud();
-
-  applyClientIdentity();
-  renderKategoriDrawer();
   renderMenu();
-  updateTampilanKeranjang();
-
-  window.addEventListener("storage", () => {
-    applyClientIdentity();
-    renderKategoriDrawer();
-    renderMenu();
-  });
+  renderQrPreview();
+  pushDataToCloudSync();
 
   const searchInput = document.getElementById("searchMenuInput");
   const btnClearSearch = document.getElementById("btnClearSearch");
-
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
       kataKunciCari = e.target.value.trim();
@@ -465,7 +580,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderMenu();
     });
   }
-
   if (btnClearSearch) {
     btnClearSearch.addEventListener("click", () => {
       kataKunciCari = "";
@@ -475,72 +589,130 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  const bukaDrawerAction = () => {
-    document.getElementById("categoryDrawer").classList.add("active");
-    document.getElementById("drawerOverlay").classList.add("active");
-    renderKategoriDrawer();
+  const btnOpenSettings = document.getElementById("btnOpenSettings");
+  const settingsModal = document.getElementById("settingsModal");
+  const btnCloseSettingsModal = document.getElementById("btnCloseSettingsModal");
+
+  if (btnOpenSettings && settingsModal) {
+    btnOpenSettings.addEventListener("click", () => {
+      renderAdminCustomMenuList();
+      renderQrPreview();
+      settingsModal.classList.add("active");
+    });
+  }
+  if (btnCloseSettingsModal && settingsModal) {
+    btnCloseSettingsModal.addEventListener("click", () => {
+      settingsModal.classList.remove("active");
+    });
+  }
+
+  const tabButtons = document.querySelectorAll(".admin-tab-btn");
+  const tabContents = {
+    store: document.getElementById("tabContentStore"),
+    menu: document.getElementById("tabContentMenu"),
+    barcode: document.getElementById("tabContentBarcode")
   };
 
-  const btnOpenDrawer = document.getElementById("btnOpenDrawer");
-  const btnOpenDrawerBrand = document.getElementById("btnOpenDrawerBrand");
-  if (btnOpenDrawer) btnOpenDrawer.addEventListener("click", bukaDrawerAction);
-  if (btnOpenDrawerBrand) btnOpenDrawerBrand.addEventListener("click", bukaDrawerAction);
-
-  const tutupDrawer = () => {
-    const drawer = document.getElementById("categoryDrawer");
-    const overlay = document.getElementById("drawerOverlay");
-    if (drawer) drawer.classList.remove("active");
-    if (overlay) overlay.classList.remove("active");
-  };
-  const btnCloseDrawer = document.getElementById("btnCloseDrawer");
-  const drawerOverlay = document.getElementById("drawerOverlay");
-  if (btnCloseDrawer) btnCloseDrawer.addEventListener("click", tutupDrawer);
-  if (drawerOverlay) drawerOverlay.addEventListener("click", tutupDrawer);
-
-  const btnCloseItemModal = document.getElementById("btnCloseItemModal");
-  if (btnCloseItemModal) btnCloseItemModal.addEventListener("click", tutupModalItem);
-
-  const btnMinusQty = document.getElementById("btnMinusQty");
-  if (btnMinusQty) {
-    btnMinusQty.addEventListener("click", () => {
-      if (qtyModal > 1) { 
-        qtyModal--; 
-        document.getElementById("modalQtyValue").textContent = qtyModal; 
-        document.getElementById("modalTotalPrice").textContent = formatRupiah(itemDipilih.harga * qtyModal); 
+  tabButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      tabButtons.forEach(b => b.classList.remove("active"));
+      Object.values(tabContents).forEach(tc => { if (tc) tc.style.display = "none"; });
+      btn.classList.add("active");
+      const targetTab = btn.getAttribute("data-tab");
+      if (tabContents[targetTab]) tabContents[targetTab].style.display = "block";
+      if (targetTab === "barcode") {
+        renderQrPreview();
+        pushDataToCloudSync();
       }
     });
-  }
+  });
 
-  const btnPlusQty = document.getElementById("btnPlusQty");
-  if (btnPlusQty) {
-    btnPlusQty.addEventListener("click", () => {
-      qtyModal++; 
-      document.getElementById("modalQtyValue").textContent = qtyModal; 
-      document.getElementById("modalTotalPrice").textContent = formatRupiah(itemDipilih.harga * qtyModal); 
+  if (settingClientUrl) {
+    settingClientUrl.addEventListener("input", (e) => {
+      storeIdentity.clientUrl = e.target.value.trim();
+      simpanStateLocal();
     });
   }
 
-  const btnAddToCart = document.getElementById("btnAddToCart");
-  if (btnAddToCart) btnAddToCart.addEventListener("click", tambahKeKeranjang);
-
-  const openCartHandler = () => {
-    const cartModal = document.getElementById("cartModal");
-    if (cartModal) cartModal.classList.add("active");
-    pilihMetodeBayar(metodePembayaran);
-  };
-
-  const btnOpenCart = document.getElementById("btnOpenCart");
-  const btnFloatingOpenCart = document.getElementById("btnFloatingOpenCart");
-  if (btnOpenCart) btnOpenCart.addEventListener("click", openCartHandler);
-  if (btnFloatingOpenCart) btnFloatingOpenCart.addEventListener("click", openCartHandler);
-
-  const btnCloseCartModal = document.getElementById("btnCloseCartModal");
-  if (btnCloseCartModal) {
-    btnCloseCartModal.addEventListener("click", () => {
-      document.getElementById("cartModal").classList.remove("active");
+  const btnSaveStoreSettings = document.getElementById("btnSaveStoreSettings");
+  if (btnSaveStoreSettings) {
+    btnSaveStoreSettings.addEventListener("click", () => {
+      const rawId = settingStoreId ? settingStoreId.value.trim() : "";
+      const name = settingStoreName ? settingStoreName.value.trim() : "";
+      const logo = settingStoreLogo ? settingStoreLogo.value.trim() : "";
+      const wa = settingStoreWa ? settingStoreWa.value.trim() : "6287877611218";
+      if (!name) return alert("Nama toko wajib diisi!");
+      storeIdentity.storeId = generateStoreSlug(rawId || name);
+      if (settingStoreId) settingStoreId.value = storeIdentity.storeId;
+      storeIdentity.name = name;
+      storeIdentity.logo = logo || name.substring(0, 2).toUpperCase();
+      storeIdentity.wa = wa || "6287877611218";
+      simpanStateLocal();
+      applyStoreIdentity();
+      tampilkanToast("✓ Identitas toko disimpan & disinkronkan!");
     });
   }
 
-  const btnSendWhatsApp = document.getElementById("btnSendWhatsApp");
-  if (btnSendWhatsApp) btnSendWhatsApp.addEventListener("click", kirimKeWhatsApp);
-});
+  const btnSaveQrisSettings = document.getElementById("btnSaveQrisSettings");
+  if (btnSaveQrisSettings) {
+    btnSaveQrisSettings.addEventListener("click", () => {
+      const qrisText = settingQrisText ? settingQrisText.value.trim() : "";
+      storeIdentity.qrisText = qrisText;
+      simpanStateLocal();
+      tampilkanToast("✓ Info pembayaran disimpan & disinkronkan!");
+    });
+  }
+
+  const btnSaveNewMenu = document.getElementById("btnSaveNewMenu");
+  if (btnSaveNewMenu) {
+    btnSaveNewMenu.addEventListener("click", () => {
+      const name = document.getElementById("addMenuName").value.trim();
+      const kategori = document.getElementById("addMenuCategory").value;
+      const harga = parseInt(document.getElementById("addMenuPrice").value);
+      const imgUrl = document.getElementById("addMenuImgUrl").value.trim();
+      const desc = document.getElementById("addMenuDesc").value.trim();
+
+      if (!name || isNaN(harga)) return alert("Lengkapi Nama dan Harga Menu!");
+
+      const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
+      const labelKategori = katObj ? katObj.nama : "Lainnya";
+      const gambarSrc = imgUrl || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
+
+      if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
+        menuCustom[editMenuIndex] = {
+          ...menuCustom[editMenuIndex],
+          nama: name, kategori, labelKategori, harga,
+          deskripsi: desc || "Menu pilihan kedai.",
+          gambar: gambarSrc
+        };
+        tampilkanToast("✓ Menu diperbarui & otomatis masuk ke Client!");
+        editMenuIndex = null;
+      } else {
+        passwordVal = ""; // reset placeholder logic
+        menuCustom.push({
+          id: Date.now(),
+          nama: name, kategori, labelKategori, harga,
+          deskripsi: desc || "Menu pilihan kedai.",
+          gambar: gambarSrc
+        });
+        tampilkanToast("✓ Menu baru ditambahkan & otomatis masuk ke Client!");
+      }
+
+      document.getElementById("addMenuName").value = "";
+      document.getElementById("addMenuPrice").value = "";
+      document.getElementById("addMenuImgUrl").value = "";
+      document.getElementById("addMenuDesc").value = "";
+      document.getElementById("formMenuHeaderTitle").textContent = "Tambah Menu Baru & Link Foto";
+      document.getElementById("btnSaveNewMenu").textContent = "Simpan & Sinkronkan ke Cloud";
+
+      simpanStateLocal();
+      renderMenu();
+      renderAdminCustomMenuList();
+    });
+  }
+
+  const btnDownloadBarcodeQr = document.getElementById("btnDownloadBarcodeQr");
+  if (btnDownloadBarcodeQr) {
+    btnDownloadBarcodeQr.addEventListener("click", downloadStyledBarcodeCard);
+  }
+}
