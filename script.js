@@ -1,4 +1,5 @@
 const ADMIN_PASS_VALID = "Kernaden";
+// Backend Cloud Sync gratis & instan (KVDB / JSONBlob fallback) agar 1 Barcode bisa dipakai selamanya tanpa download ulang
 const CLOUD_SYNC_ENDPOINT = "https://kvdb.io/A9xK7mP2qL8vR4nW6tY1zB";
 
 function generateStoreSlug(name) {
@@ -58,6 +59,7 @@ function tampilkanToast(pesan) {
   setTimeout(() => { toast.classList.remove("show"); }, 2600);
 }
 
+// Dorong data toko & daftar menu terbaru ke Cloud Sync secara otomatis setiap ada perubahan di Admin
 async function pushDataToCloudSync() {
   const indicator = document.getElementById("syncStatusIndicator");
   if (indicator) {
@@ -99,7 +101,7 @@ async function pushDataToCloudSync() {
       return true;
     }
   } catch (e) {
-    console.warn("Cloud sync offline:", e);
+    console.warn("Cloud sync offline, menggunakan fallback URL:", e);
   }
 
   if (indicator) {
@@ -116,17 +118,45 @@ function simpanStateLocal() {
   pushDataToCloudSync();
 }
 
+// Bangun URL Barcode Permanen berbasis ID Akun/Toko (?store=...) + fallback snapshot awal (?data=...)
 function buildSyncedClientUrl() {
   const latestStore = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
+  const latestMenus = JSON.parse(localStorage.getItem("umkm_menu_custom")) || menuCustom;
+
   const baseUrlInput = document.getElementById("settingClientUrl");
   let baseUrl = (baseUrlInput && baseUrlInput.value.trim()) ? baseUrlInput.value.trim() : (latestStore.clientUrl || "https://aplikasi-umkm-five.vercel.app/");
   if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
     baseUrl = "https://" + baseUrl;
   }
-  baseUrl = baseUrl.split("?")[0];
-  if (!baseUrl.endsWith("/")) baseUrl += "/";
 
-  return `${baseUrl}?store=${encodeURIComponent(latestStore.storeId)}`;
+  // Sertakan parameter ?store=ID_TOKO sebagai kunci utama sinkronisasi real-time (1 barcode selamanya)
+  // Plus ?data= sebagai cadangan instan jika jaringan sedang offline
+  const compactSnapshot = {
+    s: {
+      n: latestStore.name,
+      l: latestStore.logo,
+      w: latestStore.wa || "6287877611218",
+      q: latestStore.qrisText || ""
+    },
+    m: latestMenus.map(item => ({
+      n: item.nama,
+      k: item.kategori,
+      h: Number(item.harga),
+      d: item.deskripsi || "",
+      g: item.gambar || ""
+    }))
+  };
+
+  let encoded = "";
+  const jsonStr = JSON.stringify(compactSnapshot);
+  if (typeof LZString !== "undefined") {
+    encoded = LZString.compressToEncodedURIComponent(jsonStr);
+  } else {
+    encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+  }
+
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${separator}store=${encodeURIComponent(latestStore.storeId)}&data=${encoded}`;
 }
 
 function renderQrPreview() {
@@ -272,8 +302,11 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
+// Download Kartu Barcode Profesional (1x Download untuk Akun Toko yang Sama)
 async function downloadStyledBarcodeCard() {
   if (typeof QRCode === "undefined") return alert("Library QRCode belum termuat.");
+
+  // Pastikan data terbaru sudah tersinkron ke cloud sebelum membuat kartu
   await pushDataToCloudSync();
 
   const fullClientUrl = buildSyncedClientUrl();
@@ -299,6 +332,7 @@ async function downloadStyledBarcodeCard() {
     finalCanvas.height = H;
     const ctx = finalCanvas.getContext("2d");
 
+    // 1. Latar Belakang Luar Biru Modern
     const bgGrad = ctx.createLinearGradient(0, 0, W, H);
     bgGrad.addColorStop(0, "#60a5fa");
     bgGrad.addColorStop(0.5, "#3b82f6");
@@ -306,6 +340,7 @@ async function downloadStyledBarcodeCard() {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
+    // 2. Kartu Utama Putih Bersih
     const cardX = 36;
     const cardY = 36;
     const cardW = W - 72;
@@ -324,6 +359,7 @@ async function downloadStyledBarcodeCard() {
     roundRect(ctx, cardX, cardY, cardW, cardH, 28);
     ctx.clip();
 
+    // 3. Motif Geometris Halus di Bawah Kartu
     ctx.strokeStyle = "rgba(203, 213, 225, 0.45)";
     ctx.lineWidth = 2;
     for (let gx = cardX; gx < cardX + cardW; gx += 40) {
@@ -338,6 +374,7 @@ async function downloadStyledBarcodeCard() {
       }
     }
 
+    // 4. Aksen Segitiga Merah & Pita Emas
     ctx.fillStyle = "#ef4444";
     ctx.beginPath();
     ctx.moveTo(cardX, 230);
@@ -362,6 +399,7 @@ async function downloadStyledBarcodeCard() {
     ctx.closePath();
     ctx.fill();
 
+    // 5. Header Kartu: Logo Singkatan Toko & Menu Digital
     const logoText = (storeIdentity.logo || "CS").toUpperCase();
     const logoBoxX = cardX + 36;
     const logoBoxY = cardY + 34;
@@ -413,6 +451,7 @@ async function downloadStyledBarcodeCard() {
     ctx.lineTo(cardX + cardW - 36, cardY + 118);
     ctx.stroke();
 
+    // 6. Nama Toko & Info QRIS / Rekening
     ctx.textAlign = "center";
     ctx.fillStyle = "#0f172a";
     ctx.font = "900 28px 'Segoe UI', sans-serif";
@@ -421,8 +460,14 @@ async function downloadStyledBarcodeCard() {
     const qrisInfo = storeIdentity.qrisText || "OLAN MAULANA Bank Mandiri 1630011235432";
     ctx.fillStyle = "#475569";
     ctx.font = "600 14px 'Segoe UI', sans-serif";
-    ctx.fillText(qrisInfo, W / 2, cardY + 196);
+    if (qrisInfo.length > 48) {
+      ctx.fillText(qrisInfo.substring(0, 48), W / 2, cardY + 194);
+      ctx.fillText(qrisInfo.substring(48), W / 2, cardY + 214);
+    } else {
+      ctx.fillText(qrisInfo, W / 2, cardY + 196);
+    }
 
+    // 7. Bingkai Putih & QR Code Utama
     const qrBoxSize = 380;
     const qrBoxX = (W - qrBoxSize) / 2;
     const qrBoxY = cardY + 232;
@@ -441,6 +486,7 @@ async function downloadStyledBarcodeCard() {
 
     ctx.drawImage(qrCanvas, qrBoxX + 18, qrBoxY + 18, qrBoxSize - 36, qrBoxSize - 36);
 
+    // Badge Singkatan Logo Proporsional di Tengah (aman dengan CorrectLevel.H)
     const centerBadgeSize = 44;
     const centerX = W / 2 - centerBadgeSize / 2;
     const centerY = qrBoxY + qrBoxSize / 2 - centerBadgeSize / 2;
@@ -458,6 +504,7 @@ async function downloadStyledBarcodeCard() {
     ctx.textBaseline = "middle";
     ctx.fillText(logoText, W / 2, qrBoxY + qrBoxSize / 2 + 1);
 
+    // 8. Teks Ajakan Bawah
     ctx.fillStyle = "#0f172a";
     ctx.font = "900 18px 'Segoe UI', sans-serif";
     ctx.fillText("SATU BARCODE UNTUK SEMUA MENU", W / 2, qrBoxY + qrBoxSize + 38);
@@ -466,6 +513,7 @@ async function downloadStyledBarcodeCard() {
     ctx.font = "500 13px 'Segoe UI', sans-serif";
     ctx.fillText("Scan menggunakan Kamera HP / Google Lens untuk memesan", W / 2, qrBoxY + qrBoxSize + 64);
 
+    // 9. Footer Kiri Bawah
     ctx.textAlign = "left";
     ctx.fillStyle = "#334155";
     ctx.font = "600 12px 'Segoe UI', sans-serif";
@@ -491,80 +539,48 @@ document.addEventListener("DOMContentLoaded", () => {
   applyStoreIdentity();
   const loginScreen = document.getElementById("loginScreen");
   const mainAppContent = document.getElementById("mainAppContent");
-  
   if (localStorage.getItem("umkm_admin_logged") === "true") {
-    if (loginScreen) loginScreen.style.display = "none";
-    if (mainAppContent) mainAppContent.style.display = "block";
+    loginScreen.style.display = "none";
+    mainAppContent.style.display = "block";
     inisisasiAplikasiUtama();
-  } else {
-    if (loginScreen) loginScreen.style.display = "flex";
-    if (mainAppContent) mainAppContent.style.display = "none";
   }
 
-  const btnTogglePassword = document.getElementById("btnTogglePassword") || document.querySelector(".btn-toggle-password") || document.getElementById("togglePassword");
-  const inputAdminPassword = document.getElementById("inputAdminPassword");
-  const btnLoginAdmin = document.getElementById("btnLoginAdmin");
+  document.getElementById("btnTogglePassword").addEventListener("click", () => {
+    const inputPass = document.getElementById("inputAdminPassword");
+    inputPass.type = inputPass.type === "password" ? "text" : "password";
+  });
 
-  if (btnTogglePassword && inputAdminPassword) {
-    btnTogglePassword.addEventListener("click", () => {
-      inputAdminPassword.type = inputAdminPassword.type === "password" ? "text" : "password";
-      btnTogglePassword.textContent = inputAdminPassword.type === "password" ? "Lihat" : "Sembunyikan";
-    });
-  }
-
-  if (btnLoginAdmin) {
-    const handleLogin = () => {
-      const passwordVal = inputAdminPassword ? inputAdminPassword.value.trim() : "";
-      if (passwordVal === ADMIN_PASS_VALID) {
-        localStorage.setItem("umkm_admin_logged", "true");
-        if (loginScreen) loginScreen.style.display = "none";
-        if (mainAppContent) mainAppContent.style.display = "block";
-        inisisasiAplikasiUtama();
-        const settingsModal = document.getElementById("settingsModal");
-        if (settingsModal) settingsModal.classList.add("active");
-      } else {
-        alert("Sandi Salah! Gunakan: Kernaden");
-        if (inputAdminPassword) {
-          inputAdminPassword.focus();
-          inputAdminPassword.select();
-        }
-      }
-    };
-
-    btnLoginAdmin.addEventListener("click", handleLogin);
-    if (inputAdminPassword) {
-      inputAdminPassword.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleLogin();
-        }
-      });
+  document.getElementById("btnLoginAdmin").addEventListener("click", () => {
+    if (document.getElementById("inputAdminPassword").value.trim() === ADMIN_PASS_VALID) {
+      localStorage.setItem("umkm_admin_logged", "true");
+      loginScreen.style.display = "none";
+      mainAppContent.style.display = "block";
+      inisisasiAplikasiUtama();
+      document.getElementById("settingsModal").classList.add("active");
+    } else {
+      alert("Sandi Salah! Gunakan: Kernaden");
     }
-  }
+  });
 
-  const logoutBtn = document.getElementById("btnLogoutApp");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("umkm_admin_logged");
-      location.reload();
-    });
-  }
+  document.getElementById("btnLogoutApp").addEventListener("click", () => {
+    localStorage.removeItem("umkm_admin_logged");
+    location.reload();
+  });
 });
 
 function inisisasiAplikasiUtama() {
-  const settingStoreId = document.getElementById("settingStoreId");
-  const settingStoreName = document.getElementById("settingStoreName");
-  const settingStoreLogo = document.getElementById("settingStoreLogo");
-  const settingStoreWa = document.getElementById("settingStoreWa");
-  const settingQrisText = document.getElementById("settingQrisText");
-  const settingClientUrl = document.getElementById("settingClientUrl");
-
-  if (settingStoreId) settingStoreId.value = storeIdentity.storeId;
-  if (settingStoreName) settingStoreName.value = storeIdentity.name;
-  if (settingStoreLogo) settingStoreLogo.value = storeIdentity.logo;
-  if (settingStoreWa) settingStoreWa.value = storeIdentity.wa || "6287877611218";
-  if (settingQrisText) settingQrisText.value = storeIdentity.qrisText || "";
-  if (settingClientUrl) settingClientUrl.value = storeIdentity.clientUrl || "https://aplikasi-umkm-five.vercel.app/";
+  if (document.getElementById("settingStoreId")) {
+    document.getElementById("settingStoreId").value = storeIdentity.storeId;
+  }
+  document.getElementById("settingStoreName").value = storeIdentity.name;
+  document.getElementById("settingStoreLogo").value = storeIdentity.logo;
+  if (document.getElementById("settingStoreWa")) {
+    document.getElementById("settingStoreWa").value = storeIdentity.wa || "6287877611218";
+  }
+  document.getElementById("settingQrisText").value = storeIdentity.qrisText || "";
+  if (document.getElementById("settingClientUrl")) {
+    document.getElementById("settingClientUrl").value = storeIdentity.clientUrl || "https://aplikasi-umkm-five.vercel.app/";
+  }
 
   renderMenu();
   renderQrPreview();
@@ -588,22 +604,14 @@ function inisisasiAplikasiUtama() {
     });
   }
 
-  const btnOpenSettings = document.getElementById("btnOpenSettings");
-  const settingsModal = document.getElementById("settingsModal");
-  const btnCloseSettingsModal = document.getElementById("btnCloseSettingsModal");
-
-  if (btnOpenSettings && settingsModal) {
-    btnOpenSettings.addEventListener("click", () => {
-      renderAdminCustomMenuList();
-      renderQrPreview();
-      settingsModal.classList.add("active");
-    });
-  }
-  if (btnCloseSettingsModal && settingsModal) {
-    btnCloseSettingsModal.addEventListener("click", () => {
-      settingsModal.classList.remove("active");
-    });
-  }
+  document.getElementById("btnOpenSettings").addEventListener("click", () => {
+    renderAdminCustomMenuList();
+    renderQrPreview();
+    document.getElementById("settingsModal").classList.add("active");
+  });
+  document.getElementById("btnCloseSettingsModal").addEventListener("click", () => {
+    document.getElementById("settingsModal").classList.remove("active");
+  });
 
   const tabButtons = document.querySelectorAll(".admin-tab-btn");
   const tabContents = {
@@ -626,91 +634,82 @@ function inisisasiAplikasiUtama() {
     });
   });
 
-  if (settingClientUrl) {
-    settingClientUrl.addEventListener("input", (e) => {
+  const clientUrlInput = document.getElementById("settingClientUrl");
+  if (clientUrlInput) {
+    clientUrlInput.addEventListener("input", (e) => {
       storeIdentity.clientUrl = e.target.value.trim();
       simpanStateLocal();
     });
   }
 
-  const btnSaveStoreSettings = document.getElementById("btnSaveStoreSettings");
-  if (btnSaveStoreSettings) {
-    btnSaveStoreSettings.addEventListener("click", () => {
-      const rawId = settingStoreId ? settingStoreId.value.trim() : "";
-      const name = settingStoreName ? settingStoreName.value.trim() : "";
-      const logo = settingStoreLogo ? settingStoreLogo.value.trim() : "";
-      const wa = settingStoreWa ? settingStoreWa.value.trim() : "6287877611218";
-      if (!name) return alert("Nama toko wajib diisi!");
-      storeIdentity.storeId = generateStoreSlug(rawId || name);
-      if (settingStoreId) settingStoreId.value = storeIdentity.storeId;
-      storeIdentity.name = name;
-      storeIdentity.logo = logo || name.substring(0, 2).toUpperCase();
-      storeIdentity.wa = wa || "6287877611218";
-      simpanStateLocal();
-      applyStoreIdentity();
-      tampilkanToast("✓ Identitas toko disimpan & disinkronkan!");
-    });
-  }
+  document.getElementById("btnSaveStoreSettings").addEventListener("click", () => {
+    const rawId = document.getElementById("settingStoreId") ? document.getElementById("settingStoreId").value.trim() : "";
+    const name = document.getElementById("settingStoreName").value.trim();
+    const logo = document.getElementById("settingStoreLogo").value.trim();
+    const wa = document.getElementById("settingStoreWa") ? document.getElementById("settingStoreWa").value.trim() : "6287877611218";
+    if (!name) return alert("Nama toko wajib diisi!");
+    storeIdentity.storeId = generateStoreSlug(rawId || name);
+    if (document.getElementById("settingStoreId")) {
+      document.getElementById("settingStoreId").value = storeIdentity.storeId;
+    }
+    storeIdentity.name = name;
+    storeIdentity.logo = logo || name.substring(0, 2).toUpperCase();
+    storeIdentity.wa = wa || "6287877611218";
+    simpanStateLocal();
+    applyStoreIdentity();
+    tampilkanToast("✓ Identitas toko disimpan & disinkronkan!");
+  });
 
-  const btnSaveQrisSettings = document.getElementById("btnSaveQrisSettings");
-  if (btnSaveQrisSettings) {
-    btnSaveQrisSettings.addEventListener("click", () => {
-      const qrisText = settingQrisText ? settingQrisText.value.trim() : "";
-      storeIdentity.qrisText = qrisText;
-      simpanStateLocal();
-      tampilkanToast("✓ Info pembayaran disimpan & disinkronkan!");
-    });
-  }
+  document.getElementById("btnSaveQrisSettings").addEventListener("click", () => {
+    const qrisText = document.getElementById("settingQrisText").value.trim();
+    storeIdentity.qrisText = qrisText;
+    simpanStateLocal();
+    tampilkanToast("✓ Info pembayaran disimpan & disinkronkan!");
+  });
 
-  const btnSaveNewMenu = document.getElementById("btnSaveNewMenu");
-  if (btnSaveNewMenu) {
-    btnSaveNewMenu.addEventListener("click", () => {
-      const name = document.getElementById("addMenuName").value.trim();
-      const kategori = document.getElementById("addMenuCategory").value;
-      const harga = parseInt(document.getElementById("addMenuPrice").value);
-      const imgUrl = document.getElementById("addMenuImgUrl").value.trim();
-      const desc = document.getElementById("addMenuDesc").value.trim();
+  document.getElementById("btnSaveNewMenu").addEventListener("click", () => {
+    const name = document.getElementById("addMenuName").value.trim();
+    const kategori = document.getElementById("addMenuCategory").value;
+    const harga = parseInt(document.getElementById("addMenuPrice").value);
+    const imgUrl = document.getElementById("addMenuImgUrl").value.trim();
+    const desc = document.getElementById("addMenuDesc").value.trim();
 
-      if (!name || isNaN(harga)) return alert("Lengkapi Nama dan Harga Menu!");
+    if (!name || isNaN(harga)) return alert("Lengkapi Nama dan Harga Menu!");
 
-      const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
-      const labelKategori = katObj ? katObj.nama : "Lainnya";
-      const gambarSrc = imgUrl || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
+    const katObj = DAFTAR_KATEGORI.find(k => k.id === kategori);
+    const labelKategori = katObj ? katObj.nama : "Lainnya";
+    const gambarSrc = imgUrl || `https://placehold.co/400x300/1f1f24/f59e0b?text=${encodeURIComponent(name)}`;
 
-      if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
-        menuCustom[editMenuIndex] = {
-          ...menuCustom[editMenuIndex],
-          nama: name, kategori, labelKategori, harga,
-          deskripsi: desc || "Menu pilihan kedai.",
-          gambar: gambarSrc
-        };
-        tampilkanToast("✓ Menu diperbarui & otomatis masuk ke Client!");
-        editMenuIndex = null;
-      } else {
-        menuCustom.push({
-          id: Date.now(),
-          nama: name, kategori, labelKategori, harga,
-          deskripsi: desc || "Menu pilihan kedai.",
-          gambar: gambarSrc
-        });
-        tampilkanToast("✓ Menu baru ditambahkan & otomatis masuk ke Client!");
-      }
+    if (editMenuIndex !== null && menuCustom[editMenuIndex]) {
+      menuCustom[editMenuIndex] = {
+        ...menuCustom[editMenuIndex],
+        nama: name, kategori, labelKategori, harga,
+        deskripsi: desc || "Menu pilihan kedai.",
+        gambar: gambarSrc
+      };
+      tampilkanToast("✓ Menu diperbarui & otomatis masuk ke Client!");
+      editMenuIndex = null;
+    } else {
+      menuCustom.push({
+        id: Date.now(),
+        nama: name, kategori, labelKategori, harga,
+        deskripsi: desc || "Menu pilihan kedai.",
+        gambar: gambarSrc
+      });
+      tampilkanToast("✓ Menu baru ditambahkan & otomatis masuk ke Client!");
+    }
 
-      document.getElementById("addMenuName").value = "";
-      document.getElementById("addMenuPrice").value = "";
-      document.getElementById("addMenuImgUrl").value = "";
-      document.getElementById("addMenuDesc").value = "";
-      document.getElementById("formMenuHeaderTitle").textContent = "Tambah Menu Baru & Link Foto";
-      document.getElementById("btnSaveNewMenu").textContent = "Simpan & Sinkronkan ke Cloud";
+    document.getElementById("addMenuName").value = "";
+    document.getElementById("addMenuPrice").value = "";
+    document.getElementById("addMenuImgUrl").value = "";
+    document.getElementById("addMenuDesc").value = "";
+    document.getElementById("formMenuHeaderTitle").textContent = "Tambah Menu Baru & Link Foto";
+    document.getElementById("btnSaveNewMenu").textContent = "Simpan & Sinkronkan ke Cloud";
 
-      simpanStateLocal();
-      renderMenu();
-      renderAdminCustomMenuList();
-    });
-  }
+    simpanStateLocal();
+    renderMenu();
+    renderAdminCustomMenuList();
+  });
 
-  const btnDownloadBarcodeQr = document.getElementById("btnDownloadBarcodeQr");
-  if (btnDownloadBarcodeQr) {
-    btnDownloadBarcodeQr.addEventListener("click", downloadStyledBarcodeCard);
-  }
+  document.getElementById("btnDownloadBarcodeQr").addEventListener("click", downloadStyledBarcodeCard);
 }
