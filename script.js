@@ -129,8 +129,6 @@ function buildSyncedClientUrl() {
     baseUrl = "https://" + baseUrl;
   }
 
-  // Sertakan parameter ?store=ID_TOKO sebagai kunci utama sinkronisasi real-time (1 barcode selamanya)
-  // Plus ?data= sebagai cadangan instan jika jaringan sedang offline
   const compactSnapshot = {
     s: {
       n: latestStore.name,
@@ -302,11 +300,8 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-// Download Kartu Barcode Profesional (1x Download untuk Akun Toko yang Sama)
 async function downloadStyledBarcodeCard() {
   if (typeof QRCode === "undefined") return alert("Library QRCode belum termuat.");
-
-  // Pastikan data terbaru sudah tersinkron ke cloud sebelum membuat kartu
   await pushDataToCloudSync();
 
   const fullClientUrl = buildSyncedClientUrl();
@@ -332,7 +327,6 @@ async function downloadStyledBarcodeCard() {
     finalCanvas.height = H;
     const ctx = finalCanvas.getContext("2d");
 
-    // 1. Latar Belakang Luar Biru Modern
     const bgGrad = ctx.createLinearGradient(0, 0, W, H);
     bgGrad.addColorStop(0, "#60a5fa");
     bgGrad.addColorStop(0.5, "#3b82f6");
@@ -340,7 +334,6 @@ async function downloadStyledBarcodeCard() {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
-    // 2. Kartu Utama Putih Bersih
     const cardX = 36;
     const cardY = 36;
     const cardW = W - 72;
@@ -359,7 +352,6 @@ async function downloadStyledBarcodeCard() {
     roundRect(ctx, cardX, cardY, cardW, cardH, 28);
     ctx.clip();
 
-    // 3. Motif Geometris Halus di Bawah Kartu
     ctx.strokeStyle = "rgba(203, 213, 225, 0.45)";
     ctx.lineWidth = 2;
     for (let gx = cardX; gx < cardX + cardW; gx += 40) {
@@ -374,7 +366,6 @@ async function downloadStyledBarcodeCard() {
       }
     }
 
-    // 4. Aksen Segitiga Merah & Pita Emas
     ctx.fillStyle = "#ef4444";
     ctx.beginPath();
     ctx.moveTo(cardX, 230);
@@ -399,7 +390,6 @@ async function downloadStyledBarcodeCard() {
     ctx.closePath();
     ctx.fill();
 
-    // 5. Header Kartu: Logo Singkatan Toko & Menu Digital
     const logoText = (storeIdentity.logo || "CS").toUpperCase();
     const logoBoxX = cardX + 36;
     const logoBoxY = cardY + 34;
@@ -451,7 +441,6 @@ async function downloadStyledBarcodeCard() {
     ctx.lineTo(cardX + cardW - 36, cardY + 118);
     ctx.stroke();
 
-    // 6. Nama Toko & Info QRIS / Rekening
     ctx.textAlign = "center";
     ctx.fillStyle = "#0f172a";
     ctx.font = "900 28px 'Segoe UI', sans-serif";
@@ -467,7 +456,6 @@ async function downloadStyledBarcodeCard() {
       ctx.fillText(qrisInfo, W / 2, cardY + 196);
     }
 
-    // 7. Bingkai Putih & QR Code Utama
     const qrBoxSize = 380;
     const qrBoxX = (W - qrBoxSize) / 2;
     const qrBoxY = cardY + 232;
@@ -486,7 +474,6 @@ async function downloadStyledBarcodeCard() {
 
     ctx.drawImage(qrCanvas, qrBoxX + 18, qrBoxY + 18, qrBoxSize - 36, qrBoxSize - 36);
 
-    // Badge Singkatan Logo Proporsional di Tengah (aman dengan CorrectLevel.H)
     const centerBadgeSize = 44;
     const centerX = W / 2 - centerBadgeSize / 2;
     const centerY = qrBoxY + qrBoxSize / 2 - centerBadgeSize / 2;
@@ -504,7 +491,6 @@ async function downloadStyledBarcodeCard() {
     ctx.textBaseline = "middle";
     ctx.fillText(logoText, W / 2, qrBoxY + qrBoxSize / 2 + 1);
 
-    // 8. Teks Ajakan Bawah
     ctx.fillStyle = "#0f172a";
     ctx.font = "900 18px 'Segoe UI', sans-serif";
     ctx.fillText("SATU BARCODE UNTUK SEMUA MENU", W / 2, qrBoxY + qrBoxSize + 38);
@@ -513,7 +499,6 @@ async function downloadStyledBarcodeCard() {
     ctx.font = "500 13px 'Segoe UI', sans-serif";
     ctx.fillText("Scan menggunakan Kamera HP / Google Lens untuk memesan", W / 2, qrBoxY + qrBoxSize + 64);
 
-    // 9. Footer Kiri Bawah
     ctx.textAlign = "left";
     ctx.fillStyle = "#334155";
     ctx.font = "600 12px 'Segoe UI', sans-serif";
