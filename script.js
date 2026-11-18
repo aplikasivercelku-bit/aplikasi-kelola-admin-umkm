@@ -121,40 +121,17 @@ function simpanStateLocal() {
 // Bangun URL Barcode Permanen berbasis ID Akun/Toko (?store=...) + fallback snapshot awal (?data=...)
 function buildSyncedClientUrl() {
   const latestStore = JSON.parse(localStorage.getItem("umkm_store_identity")) || storeIdentity;
-  const latestMenus = JSON.parse(localStorage.getItem("umkm_menu_custom")) || menuCustom;
 
   const baseUrlInput = document.getElementById("settingClientUrl");
   let baseUrl = (baseUrlInput && baseUrlInput.value.trim()) ? baseUrlInput.value.trim() : (latestStore.clientUrl || "https://aplikasi-umkm-five.vercel.app/");
   if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
     baseUrl = "https://" + baseUrl;
   }
+  baseUrl = baseUrl.split("?")[0];
+  if (!baseUrl.endsWith("/")) baseUrl += "/";
 
-  const compactSnapshot = {
-    s: {
-      n: latestStore.name,
-      l: latestStore.logo,
-      w: latestStore.wa || "6287877611218",
-      q: latestStore.qrisText || ""
-    },
-    m: latestMenus.map(item => ({
-      n: item.nama,
-      k: item.kategori,
-      h: Number(item.harga),
-      d: item.deskripsi || "",
-      g: item.gambar || ""
-    }))
-  };
-
-  let encoded = "";
-  const jsonStr = JSON.stringify(compactSnapshot);
-  if (typeof LZString !== "undefined") {
-    encoded = LZString.compressToEncodedURIComponent(jsonStr);
-  } else {
-    encoded = btoa(unescape(encodeURIComponent(jsonStr)));
-  }
-
-  const separator = baseUrl.includes("?") ? "&" : "?";
-  return `${baseUrl}${separator}store=${encodeURIComponent(latestStore.storeId)}&data=${encoded}`;
+  // Cukup gunakan ?store=ID_TOKO agar client menarik data terbaru dari cloud secara real-time
+  return `${baseUrl}?store=${encodeURIComponent(latestStore.storeId)}`;
 }
 
 function renderQrPreview() {
