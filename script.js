@@ -513,7 +513,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (btnLoginAdmin) {
-    // Mendukung klik maupun tekan Enter pada kolom password
     const handleLogin = () => {
       const passwordVal = inputAdminPassword ? inputAdminPassword.value.trim() : "";
       if (passwordVal === ADMIN_PASS_VALID) {
@@ -688,7 +687,6 @@ function inisisasiAplikasiUtama() {
         tampilkanToast("✓ Menu diperbarui & otomatis masuk ke Client!");
         editMenuIndex = null;
       } else {
-        passwordVal = ""; // reset placeholder logic
         menuCustom.push({
           id: Date.now(),
           nama: name, kategori, labelKategori, harga,
